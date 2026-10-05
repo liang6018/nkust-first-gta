@@ -72,4 +72,6 @@ GTA.sim({ KeyW: true }, 120, cameraYaw);        // 前進 2 秒（60 fps）
 GTA.state();                                     // { x, y, z, zone, vehicle }
 GTA.interiors / GTA.built                        // 室內資料、建築資料（含 entrance）
 ```
-SwiftShader 軟體渲染太慢，截圖會逾時，畫面要用真的瀏覽器看。
+SwiftShader 軟體渲染太慢，截圖會逾時，畫面要用真的瀏覽器看：可用 `https://raw.githack.com/liang6018/nkust-first-gta/main/index.html` 開啟，開始遊戲後在主控台用 `GTA.view(px,py,pz,tx,ty,tz)` 架固定鏡頭、`GTA.release()` 還原。
+
+2026-10-06 已用真瀏覽器目視確認：橋東階梯劇場與棚架、管院廣場／玻璃圓塔／灰帶、電資黃色門架、圖資樓層書架都正常顯示。
