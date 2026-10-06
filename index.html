@@ -125,6 +125,7 @@ body.touch #toast{top:calc(60px + env(safe-area-inset-top,0px));font-size:14px;m
 }
 @media (max-height:540px) and (max-width:700px){ #start p{display:none;} #start .card{grid-template-areas:"eye eye" "h1 keys" "go keys" "go note";} }
 body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
+@media (max-height:480px){ body.touch #act{right:calc(176px + env(safe-area-inset-right,0px));bottom:calc(34px + env(safe-area-inset-bottom,0px));min-width:120px;height:52px;font-size:17px;} }
 @media (prefers-reduced-motion:reduce){#zone,#toast{transition:none;}}
 </style>
 
@@ -1625,7 +1626,7 @@ function buildSheds(lot, stalls) {
         const ta = tmin - .6, tb = tmax + .6, tm = (ta + tb) / 2, len = tb - ta;
         for (const sd of [-1, 1]) { const [ex, ez] = Wp(ac + sd * 2.15, tm); paint(ex, ez, .08, len, 0xf2c230, .05, ry); }
         const solar = C.solar(i, sg), mat = solar ? solarMat(2.8, len) : roofM;
-        for (const sd of [-1, 1]) { const [rx, rz] = Wp(ac + sd * 1.38, tm); const r = box(2.85, .06, len, mat, rx, 2.66 - .07, rz); r.rotation.set(0, ry, sd * .055, 'YXZ'); r.receiveShadow = false; }
+        for (const sd of [-1, 1]) { const [rx, rz] = Wp(ac + sd * 1.38, tm); const r = box(2.85, .06, len, mat, rx, 2.66 - .07, rz); r.rotation.set(0, ry, sd * .055, 'YXZ'); r.receiveShadow = false; r.updateMatrixWorld(); blockers.push(r); }
         { const [bx, bz] = Wp(ac, tm); const bm = box(.14, .16, len, postM, bx, 2.6, bz); bm.rotation.y = ry; }
         for (let t = ta + .4; t <= tb - .3; t += Math.max(4, len / Math.round(len / 5))) { const [px, pz] = Wp(ac, t); cyl(.07, .07, 2.6, postM, px, 1.3, pz, scene, 8); addCircle(px, pz, .16); const arm = box(4.6, .1, .1, postM, px, 2.52, pz); arm.rotation.y = ry; }
       }
