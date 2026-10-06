@@ -1,0 +1,11 @@
+{
+  "name": "高科大第一校區 GTA",
+  "short_name": "校園GTA",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0d1114",
+  "theme_color": "#0d1114",
+  "icons": [{ "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+}
