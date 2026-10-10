@@ -143,10 +143,10 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
 <div class="help" id="help" hidden>
   <h3>步行</h3>
   <div class="row"><kbd>WASD</kbd>移動　<kbd>SHIFT</kbd>奔跑　<kbd>SPACE</kbd>跳</div>
-  <div class="row"><kbd>F</kbd>上車／騎車／搭話　<kbd>滑鼠</kbd>轉動視角</div>
+  <div class="row"><kbd>F</kbd>上車／騎車／騎腳踏車／搭話　<kbd>滑鼠</kbd>轉動視角</div>
   <h3>駕駛</h3>
-  <div class="row"><kbd>W</kbd>油門　<kbd>S</kbd>煞車／倒車　<kbd>A D</kbd>轉向</div>
-  <div class="row"><kbd>SPACE</kbd>手煞車　<kbd>H</kbd>喇叭　<kbd>L</kbd>大燈</div>
+  <div class="row"><kbd>W</kbd>油門／踩踏板　<kbd>S</kbd>煞車／倒車　<kbd>A D</kbd>轉向</div>
+  <div class="row"><kbd>SPACE</kbd>手煞車　<kbd>H</kbd>喇叭／鈴鐺　<kbd>L</kbd>大燈</div>
   <h3>其他</h3>
   <div class="row"><kbd>M</kbd>大地圖（點擊傳送）　<kbd>N</kbd>日／夜</div>
   <div class="row"><kbd>R</kbd>回到行政大樓　<kbd>滾輪</kbd>鏡頭遠近</div>
@@ -174,11 +174,11 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
   <div class="card">
     <div class="eyebrow">NKUST · FIRST CAMPUS · 燕巢 ／ 楠梓</div>
     <h1>第一校區<small>Grand Theft Campus</small></h1>
-    <p>國立高雄科技大學第一校區。東校區沿著斜向的中山高往東北延伸，從大學路大門進來是小圓環，紅磚與鮭魚橘磁磚的學院大樓沿中軸步道排開；走過 7 公尺高、黃色護牆的大學橋，就到了宿舍、運動場和鴴池所在的西校區。停車場裡的機車和汽車都可以騎、可以開。</p>
+    <p>國立高雄科技大學第一校區。東校區沿著斜向的中山高往東北延伸，從大學路大門進來是小圓環，紅磚與鮭魚橘磁磚的學院大樓沿中軸步道排開；走過 7 公尺高、黃色護牆的大學橋，就到了宿舍、運動場和鴴池所在的西校區。停車場裡的機車和汽車都可以騎、可以開，中軸車架和宿舍門口的腳踏車、YouBike 站的公共腳踏車也能借來騎。</p>
     <div class="keys">
       <span><b>WASD</b>移動 ／ 駕駛</span>
       <span><b>滑鼠</b>第三人稱視角</span>
-      <span><b>F</b>上下車、搭話、摸狗</span>
+      <span><b>F</b>上下車、騎腳踏車、搭話、摸狗</span>
       <span><b>SHIFT</b>奔跑</span>
       <span><b>SPACE</b>跳 ／ 手煞車</span>
       <span><b>M</b>大地圖・傳送</span>
@@ -449,13 +449,56 @@ const ROADS = SURVEY.roads.map(r => {
 const roadBy = n => ROADS.find(r => r.n === n);
 const CAR_ROADS = ROADS.filter(r => r.t === 'car' && !r.freeway);
 
-/* ---------- bridge ramps: approaches climb to the 7 m deck ---------- */
+/* ---------- bridge approaches ----------
+   The 7 m deck lands on an abutment pad at each end; the roads turn 90° there and run down beside the freeway
+   on retaining-wall embankments: 10 m level, then a 26 m crest curve, a constant ~6.7 % grade and a 26 m sag
+   curve (130 m in all). The footpaths leave the pads by stairs: three 15-step flights with two landings. */
 const DECK = 7;
-function rampFrom(name, reverse, len) { const r = roadBy(name); if (!r) return null; let pts = r.raw.slice(); if (reverse) pts.reverse(); pts = subdivide(pts, 2); const keep = []; let s = 0; for (let i = 0; i < pts.length; i++) { if (i) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); keep.push(pts[i]); if (s > len + 4) break; } return { pts: keep, half: r.half, len, box: bboxOf(keep, r.half + 20) }; }
+const RAMP = { s0: 10, L: 130, vc: 26 };
+RAMP.g = DECK / (RAMP.L - RAMP.vc);
+function rampProfile(s) {
+  const u = s - RAMP.s0, { L, vc, g } = RAMP;
+  if (u <= 0) return DECK; if (u >= L) return 0;
+  if (u < vc) return DECK - g * u * u / (2 * vc);
+  if (u > L - vc) return g * (L - u) * (L - u) / (2 * vc);
+  return DECK - g * (u - vc / 2);
+}
+const STAIR = { top: 14, n: 45, flights: 3, tread: .3, landing: 1.8 };
+STAIR.rise = DECK / STAIR.n; STAIR.per = STAIR.n / STAIR.flights; STAIR.fl = STAIR.per * STAIR.tread; STAIR.len = STAIR.flights * STAIR.fl + (STAIR.flights - 1) * STAIR.landing;
+function stairProfile(s) {
+  let u = s - STAIR.top; if (u < 0) return DECK;
+  for (let f = 0; f < STAIR.flights; f++) {
+    if (u < STAIR.fl) return Math.max(0, DECK - (f * STAIR.per + Math.floor(u / STAIR.tread) + 1) * STAIR.rise);
+    u -= STAIR.fl;
+    if (f < STAIR.flights - 1) { if (u < STAIR.landing) return DECK - (f + 1) * STAIR.per * STAIR.rise; u -= STAIR.landing; }
+  }
+  return 0;
+}
+function rampFrom(name, reverse, stairs) {
+  const r = roadBy(name); if (!r) return null; let pts = r.raw.slice(); if (reverse) pts.reverse(); pts = subdivide(pts, 2);
+  const len = stairs ? STAIR.top + STAIR.len : RAMP.s0 + RAMP.L, keep = []; let s = 0;
+  for (let i = 0; i < pts.length; i++) { if (i) s += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); keep.push(pts[i]); if (s > len + 4) break; }
+  // road: asphalt + kerb + planting strip + footway; stairs: 5.2 m wide
+  const W = stairs ? 2.6 : r.half + SW_OFF + 1.5;
+  return { name, road: r, pts: keep, half: r.half, W, len, stairs, prof: stairs ? stairProfile : rampProfile, box: bboxOf(keep, W + 2) };
+}
+const SW_OFF = 3.3; // centre of the footway, measured from the asphalt edge
 const RAMPS = [
-  rampFrom('大學橋→東校區 西緣道路(沿國道)', true, 70), rampFrom('東校區外環道', false, 70), rampFrom('大學橋東端→圓形廣場 步道', true, 40),
-  rampFrom('西校區→大學橋 引道', true, 70), rampFrom('大學橋西端→西校區(沿國道南下)', false, 70), rampFrom('大學橋西端→鴴池 步道', false, 45),
+  rampFrom('大學橋→東校區 西緣道路(沿國道)', true), rampFrom('東校區外環道', false), rampFrom('大學橋東端→圓形廣場 步道', true, true),
+  rampFrom('西校區→大學橋 引道', true), rampFrom('大學橋西端→西校區(沿國道南下)', false), rampFrom('大學橋西端→鴴池 步道', false, true),
 ].filter(Boolean);
+/* abutment pads: the deck's end edge pushed 14 m outward and widened so the 90° road turns stay level */
+const PADS = (() => {
+  const P = BRIDGE_POLY, out = [];
+  for (const [a, b, o] of [[P[1], P[2], P[0]], [P[3], P[0], P[1]]]) {
+    const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, ex = b[0] - a[0], ez = b[1] - a[1], el = Math.hypot(ex, ez), bx = ex / el, bz = ez / el;
+    let ax = -bz, az = bx; if ((o[0] - mx) * ax + (o[1] - mz) * az > 0) { ax = -ax; az = -az; } // outward, away from the deck
+    const D = STAIR.top, H = el / 2 + 8.5, Ab = 11; // Ab: abutment block under the deck end
+    const pt = (u, v) => [mx + ax * u + bx * v, mz + az * u + bz * v];
+    out.push({ pts: [pt(0, -H), pt(D, -H), pt(D, H), pt(0, H)], under: [pt(-Ab, -el / 2), pt(0, -el / 2), pt(0, el / 2), pt(-Ab, el / 2)], m: [mx, mz], a: [ax, az], b: [bx, bz], el });
+  }
+  out.forEach(p => p.box = bboxOf(p.pts)); return out;
+})();
 const BRIDGE_BOX = bboxOf(BRIDGE_POLY);
 /* 橋東圓形廣場 amphitheatre (Street View): ~10 concrete tiers rising to the north-north-east, pergola on top */
 const AMPHI = { x: SURVEY.anchors['橋東圓形廣場中心（落橋處）'][0], z: SURVEY.anchors['橋東圓形廣場中心（落橋處）'][1], r0: 25, tier: .9, rise: .38, n: 10, top: 37, foot: 44, a0: THREE.MathUtils.degToRad(110), a1: THREE.MathUtils.degToRad(200) };
@@ -472,16 +515,16 @@ function groundY(x, z) {
   if (inBox(x, z, BRIDGE_BOX) && inPoly(x, z, BRIDGE_POLY)) return DECK;
   return Math.max(rampY(x, z), amphiY(x, z));
 }
-/* height of the approach embankments only (no deck) — used for terrain under/around the bridge */
+/* height of the approach pads, embankments and stairs (no deck). Level across the full width, then a sheer
+   retaining wall: nothing slopes off sideways. */
 function rampY(x, z) {
+  for (const P of PADS) if (inBox(x, z, P.box) && inPoly(x, z, P.pts)) return DECK;
   let y = 0;
   for (const R of RAMPS) {
     if (!inBox(x, z, R.box)) continue;
     const [d, s] = lineDist(x, z, R.pts);
-    if (s > R.len) continue;
-    const t = 1 - s / R.len, h = DECK * t * t * (3 - 2 * t);
-    const v = h - Math.max(0, d - R.half - .6) * .5;
-    if (v > y) y = v;
+    if (d > R.W || s > R.len) continue;
+    const v = R.prof(s); if (v > y) y = v;
   }
   return y;
 }
@@ -1605,14 +1648,6 @@ function buildGround() {
   farm.receiveShadow = true; scene.add(farm);
   // 橋頭科學園區 construction north of the east campus: bare earth beyond the green hoarding
   for (let i = 0; i < 6; i++) flat(rr(160, 260), rr(60, 110), matDirt, rr(-150, 800), .01, rr(-640, -560), 12);
-  // embankments under the bridge approaches
-  for (const R of RAMPS) {
-    const b = R.box, w = b.maxX - b.minX, d = b.maxZ - b.minZ, sx = Math.ceil(w / 1.5), sz = Math.ceil(d / 1.5);
-    const g = new THREE.PlaneGeometry(w, d, sx, sz); g.rotateX(-Math.PI / 2);
-    const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i) + (b.minX + b.maxX) / 2, z = p.getZ(i) + (b.minZ + b.maxZ) / 2; const y = rampY(x, z); p.setY(i, y > .01 ? y - .03 : -.06); }
-    g.computeVertexNormals(); const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 6, uv.getY(i) * d / 6);
-    const m = new THREE.Mesh(g, matGrass); m.position.set((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2); m.receiveShadow = true; scene.add(m);
-  }
 }
 
 function buildRoads() {
@@ -1635,6 +1670,7 @@ function buildRoads() {
       for (const sg of [-1, 1]) ribbon(pts, .35, .04, matPaver, { offset: sg * (r.half - .35), uv: 3 });
     } else {
       const wood = r.n.includes('木棧');
+      if (RAMPS.some(R => R.stairs && R.road === r)) { const low = pts.filter(([x, z]) => rampY(x, z) < .01); if (low.length > 1) ribbon(low, r.half, .03, matPaver, { uv: 4 }); continue; }
       ribbon(pts, r.half, wood ? .16 : .03, wood ? matWood : matPaver, { uv: wood ? 3 : 4 });
       if (wood) for (const sg of [-1, 1]) { const rail = offsetLine(r.p, sg * (r.half - .1)); for (let s = 0; s < polyLen(rail); s += 3) { const [x, z] = sampleLine(rail, s); box(.12, .9, .12, M(0x6b4528), x, .6, z, scene, false); } ribbon(subdivide(rail, 2), .06, .95, M(0x6b4528), { flatY: 0 }); }
     }
@@ -1679,7 +1715,6 @@ function buildRoads() {
   zone('橋東圓形廣場', '大學橋東端落橋處', { minX: PZ[0] - 25, maxX: PZ[0] + 25, minZ: PZ[1] - 25, maxZ: PZ[1] + 25 }, '圓形廣場', 3);
 }
 const RB = { x: 0, z: 0 };
-const SW_OFF = 3.3; // centre of the footway, measured from the asphalt edge
 
 const FREEWAY = [];
 function buildFreeway() {
@@ -1745,6 +1780,110 @@ function buildBridge() {
   for (const t of [.05, .3, .5, .7, .95]) for (const o of [-5, 5]) { const x = lerp(ax[0], bx[0], t), z = lerp(ax[1], bx[1], t); const nx = -(bx[1] - ax[1]), nz = bx[0] - ax[0], nl = Math.hypot(nx, nz); cyl(.9, 1, DECK - 1.3, matConcrete, x + nx / nl * o, (DECK - 1.3) / 2, z + nz / nl * o, scene, 16); }
   zone('大學橋', '跨越國道一號（中山高）', BRIDGE_BOX, '大學橋', 4);
   mapFills.push({ pts: BRIDGE_POLY, c: '#c4c8cc' });
+}
+
+/* bridge approaches: abutment pads, retaining-wall embankments with the bridge's yellow parapet carried down,
+   stairs from the pads to the 圓形廣場 and the 鴴池 path. Walls are found by sampling the edges of every raised
+   footprint and keeping the stretches that actually drop to lower ground, so overlapping ramps merge cleanly. */
+const retainTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#98948a'; g.fillRect(0, 0, w, h); speckle(g, w, h, 4000, .12);
+  for (let x = 0; x < w; x += 64) { g.fillStyle = `rgba(${rnd() < .5 ? '0,0,0' : '255,255,255'},${rr(.02, .06)})`; g.fillRect(x, 0, 64, h); } // panel-to-panel tone
+  g.fillStyle = 'rgba(0,0,0,.16)'; for (let x = 0; x < w; x += 64) g.fillRect(x, 0, 2, h); for (let y = 0; y < h; y += 64) g.fillRect(0, y, w, 2); // form-panel joints
+  for (let x = 32; x < w; x += 64) for (let y = 32; y < h; y += 64) { g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); } // tie holes
+  for (let i = 0; i < 7; i++) { const x = rnd() * w, len = rr(40, 150); for (let k = 0; k < 60; k++) { g.fillStyle = `hsla(${rr(85, 115)},${rr(30, 50)}%,${rr(22, 34)}%,.85)`; const yy = rnd() * len; g.fillRect(x + rr(-14, 14) * (yy / len + .2), yy, rr(3, 7), rr(3, 6)); } } // ivy hanging from the coping
+  for (let i = 0; i < 26; i++) { const x = rnd() * w, len = rr(20, 90); const gr = g.createLinearGradient(0, h - len, 0, h); gr.addColorStop(0, 'rgba(60,55,45,0)'); gr.addColorStop(1, 'rgba(60,55,45,.22)'); g.fillStyle = gr; g.fillRect(x, h - len, rr(3, 9), len); } // damp stains at the foot
+});
+function buildApproaches() {
+  const geo = { ret: [[], []], par: [[], []] }; // [positions, uvs]
+  const quad = (G, a, b, c, d, uv) => { G[0].push(...a, ...b, ...c, ...a, ...c, ...d); G[1].push(...uv[0], ...uv[1], ...uv[2], ...uv[0], ...uv[2], ...uv[3]); };
+  const lines = [];
+  for (const P of PADS) { lines.push({ pts: [...P.pts, P.pts[0]], out: 1 }); }
+  { const P = BRIDGE_POLY, trimEnd = (a, b, d) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L; return [[a[0], a[1]], [a[0] + ux * d, a[1] + uz * d]]; };
+    for (const [a, b] of [[P[1], P[0]], [P[0], P[1]], [P[2], P[3]], [P[3], P[2]]]) lines.push({ pts: trimEnd(a, b, 11.5), deck: true }); }
+  for (const R of RAMPS) for (const sg of [-1, 1]) lines.push({ pts: offsetLine(R.pts, sg * R.W), ramp: R });
+  const cen = [0, 0];
+  let wallsN = 0, shrubs = [];
+  for (const Ln of lines) {
+    const pts = subdivide(Ln.pts, Ln.ramp && Ln.ramp.stairs ? .5 : 1), S = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)]; let tx = b[0] - a[0], tz = b[1] - a[1]; const tl = Math.hypot(tx, tz) || 1; tx /= tl; tz /= tl;
+      let nx = -tz, nz = tx; const [x, z] = pts[i];
+      // outward = towards the lower side
+      const hA = groundY(x + nx * .6, z + nz * .6), hB = groundY(x - nx * .6, z - nz * .6);
+      if (hA > hB) { nx = -nx; nz = -nz; }
+      const hin = Math.max(hA, hB), hout = Math.min(hA, hB);
+      S.push({ x, z, nx, nz, hin, hout, drop: hin - hout });
+    }
+    let run = 0;
+    for (let i = 0; i + 1 < S.length; i++) {
+      const A = S[i], B = S[i + 1]; if (A.drop < .04 || B.drop < .04) { run = 0; continue; }
+      const L = Math.hypot(B.x - A.x, B.z - A.z), u0 = run, u1 = run + L; run = u1;
+      const yb = Math.min(A.hout, B.hout) - .12, top = Math.max(A.hin, B.hin), hiA = A.hin, hiB = B.hin;
+      const ph = d => clamp((d - .25) / .5, 0, 1) * 1.05, pA = ph(A.drop), pB = ph(B.drop);
+      // retaining face (outer side), ground to deck level
+      quad(geo.ret, [A.x, yb, A.z], [B.x, yb, B.z], [B.x, hiB, B.z], [A.x, hiA, A.z], [[u0 / 4, yb / 4], [u1 / 4, yb / 4], [u1 / 4, hiB / 4], [u0 / 4, hiA / 4]]);
+      if (pA > .02 || pB > .02) { // parapet: .3 m thick, both faces and the cap
+        const t = .3, Ai = [A.x - A.nx * t, A.z - A.nz * t], Bi = [B.x - B.nx * t, B.z - B.nz * t], v = u => u / 3.3;
+        quad(geo.par, [A.x, hiA, A.z], [B.x, hiB, B.z], [B.x, hiB + pB, B.z], [A.x, hiA + pA, A.z], [[v(u0), 0], [v(u1), 0], [v(u1), 1], [v(u0), 1]]);
+        quad(geo.par, [Ai[0], hiA, Ai[1]], [Bi[0], hiB, Bi[1]], [Bi[0], hiB + pB, Bi[1]], [Ai[0], hiA + pA, Ai[1]], [[v(u0), 0], [v(u1), 0], [v(u1), 1], [v(u0), 1]]);
+        quad(geo.par, [A.x, hiA + pA, A.z], [B.x, hiB + pB, B.z], [Bi[0], hiB + pB, Bi[1]], [Ai[0], hiA + pA, Ai[1]], [[v(u0), .97], [v(u1), .97], [v(u1), 1], [v(u0), 1]]);
+      }
+      const ontoStairs = !Ln.ramp && RAMPS.some(R => R.stairs && lineDist(A.x + A.nx * .6, A.z + A.nz * .6, R.pts)[0] < R.W - .1); // pad edge at the top of a flight: open
+      if (Math.max(A.drop, B.drop) > .35 && !ontoStairs) { addWall(A.x, A.z, B.x, B.z, Math.min(A.hout, B.hout) - 1, top + 1.6, false, .2); wallsN++; }
+      if (A.drop > 2 && A.hout < .1 && i % 3 === 0 && !Ln.deck) shrubs.push([A.x + A.nx * 1.1, A.z + A.nz * 1.1]);
+    }
+  }
+  const mk = (G, mat) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(G[0], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(G[1], 2)); g.computeVertexNormals(); const m = new THREE.Mesh(g, mat); m.castShadow = m.receiveShadow = true; scene.add(m); blockers.push(m); return m; };
+  mk(geo.ret, M(0xffffff, { map: retainTex, roughness: .95, side: THREE.DoubleSide }));
+  mk(geo.par, M(0xffffff, { map: bridgeWallTex, roughness: .8, side: THREE.DoubleSide }));
+  // pads: concrete deck finish; abutment block under each deck end
+  for (const P of PADS) {
+    shapeMesh(P.pts, M(0xa9a59c, { map: concreteTex }), DECK + .012, 6);
+    const [a, b, c, d] = P.under, top = DECK - 1.3;
+    const ab = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(b[0] - a[0], b[1] - a[1]), top, P.el), M(0xffffff, { map: retainTex, roughness: .95 }));
+    ab.position.set((a[0] + b[0] + c[0] + d[0]) / 4, top / 2, (a[1] + b[1] + c[1] + d[1]) / 4); ab.rotation.y = Math.atan2(-P.a[1], P.a[0]); ab.receiveShadow = true; scene.add(ab);
+    addWall(a[0], a[1], d[0], d[1], -99, top - .3);
+  }
+  // planted verge on top of the road embankments (between kerb and footway), as far as the ramp is raised
+  for (const R of RAMPS) {
+    if (R.stairs) continue;
+    const up = []; let s = 0; for (let i = 0; i < R.pts.length; i++) { if (i) s += Math.hypot(R.pts[i][0] - R.pts[i - 1][0], R.pts[i][1] - R.pts[i - 1][1]); if (s > R.len) break; up.push(R.pts[i]); }
+    ribbon(up, R.W, .008, matGrass, { uv: 6 });
+  }
+  // stairs: concrete flights with dark nosings, landings, a central handrail and bollards top and bottom
+  const stepM = M(0xffffff, { map: concreteTex, color: 0xd6d2c8, roughness: .9 }), noseM = M(0x4a4a48, { roughness: .8 });
+  for (const R of RAMPS) if (R.stairs) {
+    const w = R.W * 2, items = [];
+    for (let f = 0; f < STAIR.flights; f++) {
+      const f0 = STAIR.top + f * (STAIR.fl + STAIR.landing);
+      for (let k = 0; k < STAIR.per; k++) { const h = DECK - (f * STAIR.per + k + 1) * STAIR.rise; if (h > .01) items.push([f0 + k * STAIR.tread, f0 + (k + 1) * STAIR.tread, h]); }
+      if (f < STAIR.flights - 1) items.push([f0 + STAIR.fl, f0 + STAIR.fl + STAIR.landing, DECK - (f + 1) * STAIR.per * STAIR.rise]);
+    }
+    const steps = new THREE.InstancedMesh(boxGeo, stepM, items.length), noses = new THREE.InstancedMesh(boxGeo, noseM, items.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler();
+    items.forEach(([a, b, h], i) => {
+      const [x, z, tx, tz] = sampleLine(R.pts, (a + b) / 2), [x0, z0] = sampleLine(R.pts, b); eu.set(0, Math.atan2(tx, tz), 0); q.setFromEuler(eu);
+      m4.compose(new THREE.Vector3(x, h / 2, z), q, new THREE.Vector3(w - .62, h, b - a + .02)); steps.setMatrixAt(i, m4);
+      m4.compose(new THREE.Vector3(x0 - tx * .04, h - .015, z0 - tz * .04), q, new THREE.Vector3(w - .62, .035, .08)); noses.setMatrixAt(i, m4);
+    });
+    steps.castShadow = steps.receiveShadow = true; scene.add(steps, noses);
+    // handrail down the middle: posts every 1.5 m, rail at 0.9 m
+    const rail = []; for (let s = STAIR.top + .3; s < STAIR.top + STAIR.len; s += 1.5) { const [x, z] = sampleLine(R.pts, s); const h = R.prof(s); cyl(.03, .03, .9, matSteel, x, h + .45, z, scene, 6); rail.push([x, z, h + .9]); }
+    for (let i = 1; i < rail.length; i++) { const [x1, z1, y1] = rail[i - 1], [x2, z2, y2] = rail[i]; const L = Math.hypot(x2 - x1, z2 - z1, y2 - y1); const r = cyl(.035, .035, L, matSteel, (x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2, scene, 6); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(x2 - x1, y2 - y1, z2 - z1).normalize()); }
+    // bollards: keep cars and scooters off the stairs (bikes and people squeeze between)
+    for (const [s, y] of [[STAIR.top - .6, DECK], [STAIR.top + STAIR.len + .8, 0]]) { const [x, z, tx, tz] = sampleLine(R.pts, s); for (const o of [-1.95, -.65, .65, 1.95]) { const bx = x - tz * o, bz = z + tx * o; cyl(.11, .11, .8, M(0x3b3d40, { metalness: .5, roughness: .4 }), bx, y + .4, bz, scene, 10); box(.23, .06, .23, M(0xf2c23a), bx, y + .62, bz, scene, false); addCircle(bx, bz, .14, y - 1, y + 2); } }
+  }
+  shrubs.forEach(([x, z]) => { if (!occupied(x, z, .3)) treeSpots.shrub.push([x, z, 1.6, 0, null, 1.1]); });
+  // signs: campus speed limit at each ramp foot, steep-grade warning at the top
+  const limitT = textTex(['20'], { w: 256, h: 256, bg: '#fff', fg: '#111', sizes: [130] }), steepT = textTex(['陡坡', '慢行'], { w: 256, h: 256, bg: '#f2c23a', fg: '#111', sizes: [70, 70] });
+  const sign = (R, s, tex, round) => {
+    const [x, z, tx, tz] = sampleLine(R.pts, s), down = s < RAMP.s0 + 1, o = (R.half + 1.1) * (down ? -1 : 1), px = x + tz * o, pz = z - tx * o, y = groundY(px, pz);
+    cyl(.04, .04, 2.6, matSteel, px, y + 1.3, pz, scene, 6); addCircle(px, pz, .1, y - 1, y + 3);
+    const face = new THREE.Mesh(round ? new THREE.CircleGeometry(.38, 28) : new THREE.PlaneGeometry(.7, .7), new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide }));
+    face.position.set(px, y + 2.4, pz); face.rotation.y = Math.atan2(tx, tz) + (down ? Math.PI : 0); if (!round) face.rotation.z = Math.PI / 4; scene.add(face);
+    if (round) { const ring = new THREE.Mesh(new THREE.RingGeometry(.3, .4, 28), M(0xc8232c, { side: THREE.DoubleSide })); ring.position.copy(face.position); ring.rotation.copy(face.rotation); ring.translateZ(.005); scene.add(ring); }
+  };
+  for (const R of RAMPS) if (!R.stairs) { sign(R, RAMP.s0 + RAMP.L + 4, limitT, true); sign(R, RAMP.s0 - 2, steepT, false); }
+  zone('大學橋引道', '大學橋東西兩側的上坡', bboxOf(PADS.flatMap(P => P.pts), 2), '大學橋', 1);
 }
 
 /* ================= lots, sports, pond, landscape ================= */
@@ -1979,7 +2118,8 @@ function buildFurniture() {
   const AL = polyLen(ax.p);
   for (let s = 4; s < AL - 3; s += 9) { const [x, z, tx, tz] = sampleLine(ax.p, s); for (const sg of [-1, 1]) treeSpots.terminalia.push([x - tz * sg * 6.8, z + tx * sg * 6.8]); }
   const rackMat = M(0xc8ccd0, { metalness: .9, roughness: .25 });
-  for (let s = 20; s < AL - 10; s += 60) for (let k = 0; k < 8; k++) { const [x, z, tx, tz] = sampleLine(ax.p, s + k * 1.1); const rx = x - tz * 4.3, rz = z + tx * 4.3; const r = new THREE.Mesh(new THREE.TorusGeometry(.38, .03, 6, 16, Math.PI), rackMat); r.position.set(rx, 0, rz); r.rotation.y = Math.atan2(-tz, tx) + Math.PI / 2; scene.add(r); addCircle(rx, rz, .42); }
+  for (let s = 20; s < AL - 10; s += 60) for (let k = 0; k < 8; k++) { const [x, z, tx, tz] = sampleLine(ax.p, s + k * 1.1); const rx = x - tz * 4.3, rz = z + tx * 4.3; const r = new THREE.Mesh(new THREE.TorusGeometry(.38, .03, 6, 16, Math.PI), rackMat); r.position.set(rx, 0, rz); r.rotation.y = Math.atan2(-tz, tx) + Math.PI / 2; scene.add(r); addCircle(rx, rz, .42);
+    if (k < 7 && rnd() < .35) { const [x2, z2] = sampleLine(ax.p, s + k * 1.1 + .55); BIKE_SPOTS.push([x2 - tz * 4.3, z2 + tx * 4.3, Math.atan2(-tz, tx) + (rnd() < .5 ? 0 : Math.PI)]); } }
   // street lamps: slim single poles with a flat square head
   const lamps = lampSpots.filter(([x, z]) => Math.hypot(x - RB.x, z - RB.z) > 17 && !pavedPolys.some(p => inPoly(x, z, p))).filter(([x, z]) => !CAR_ROADS.some(r => inBox(x, z, r.box) && lineDist(x, z, r.p, r.closed)[0] < r.half + .3) && !colliders.some(c => inBox(x, z, c.box) && inPoly(x, z, c.pts)));
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
@@ -2004,10 +2144,13 @@ function buildFurniture() {
     for (const k of [-1, 1]) { const u = new THREE.Mesh(new THREE.TorusGeometry(.45, .05, 6, 14, Math.PI), bolMat[(k + 1) / 2]); u.position.set(p[0] + k * .9, 0, p[1]); scene.add(u); addCircle(p[0] + k * .9, p[1], .5); }
   }
   // YouBike docks: 財金學院, 西校區大門, 游泳館
-  const yb = (x, z, rot) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g); box(.6, 1.6, .5, M(0xf2b134), -5, .8, 0, g); for (let i = 0; i < 8; i++) { box(.12, .9, .2, M(0x5b5f63), -3.6 + i * 1, .45, 0, g); if (rnd() < .75) { const bk = new THREE.Group(); bk.position.set(-3.6 + i * 1, 0, .9); bk.rotation.y = Math.PI / 2; g.add(bk); for (const s of [-.55, .55]) { const w = new THREE.Mesh(new THREE.TorusGeometry(.32, .04, 6, 16), matTire); w.position.set(s, .34, 0); bk.add(w); } box(1.1, .06, .06, M(0xf2b134, { metalness: .3 }), 0, .62, 0, bk); box(.06, .5, .06, M(0xf2b134), .2, .5, 0, bk); box(.3, .06, .14, M(0x222222), .2, .78, 0, bk); } } addColPoly([[x - 6, z - 1.5], [x + 6, z - 1.5], [x + 6, z + 1.5], [x - 6, z + 1.5]].map(([px, pz]) => { const dx = px - x, dz = pz - z; return [x + dx * Math.cos(rot) + dz * Math.sin(rot), z - dx * Math.sin(rot) + dz * Math.cos(rot)]; })); };
+  const yb = (x, z, rot) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g); box(.6, 1.6, .5, M(0xf2b134), -5, .8, 0, g); for (let i = 0; i < 8; i++) { box(.12, .9, .2, M(0x5b5f63), -3.6 + i * 1, .45, 0, g); if (rnd() < .6) { const lx = -3.6 + i * 1, lz = 1.15; BIKE_SPOTS.push([x + lx * Math.cos(rot) + lz * Math.sin(rot), z - lx * Math.sin(rot) + lz * Math.cos(rot), rot + Math.PI, 'youbike']); } } addColPoly([[x - 6, z - .4], [x + 6, z - .4], [x + 6, z + .35], [x - 6, z + .35]].map(([px, pz]) => { const dx = px - x, dz = pz - z; return [x + dx * Math.cos(rot) + dz * Math.sin(rot), z - dx * Math.sin(rot) + dz * Math.cos(rot)]; })); };
   const byName = n => BUILT.find(b => b.name.startsWith(n));
   for (const n of ['財金學院', '游泳館']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance; const x = E.x + E.nx * 9 + E.nz * 12, z = E.z + E.nz * 9 - E.nx * 12; if (!occupied(x, z, 2)) yb(x, z, Math.atan2(E.nx, E.nz) + Math.PI / 2); }
   { const W = SURVEY.anchors['卓越路大門（西校區，南端）']; yb(W[0] + 16, W[1] - 14, 0); }
+  // students' own bikes parked by the dorm doors
+  for (const n of ['敬業樓 A', '敬業樓 B', '樂群樓']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance;
+    for (const side of [1, -1]) { const x0 = E.x + E.nx * 4 + E.nz * side * 4.5, z0 = E.z + E.nz * 4 - E.nx * side * 4.5; if (occupied(x0, z0, .5)) continue; for (let k = 0; k < 3; k++) { const x = x0 + E.nz * side * k * .8, z = z0 - E.nx * side * k * .8; if (!occupied(x, z, .3)) BIKE_SPOTS.push([x, z, Math.atan2(E.nx, E.nz) + rr(-.1, .1)]); } break; } }
   // sculptures: red steel "number fence" in front of 外語學院, white leaf sculpture in front of 教學研究大樓
   { const b = byName('外語學院'); if (b && b.entrance) { const E = b.entrance; for (let k = 0; k < 14; k++) { const t = 14 + (k - 6.5) * .7, x = E.x + E.nx * 9 + E.nz * t, z = E.z + E.nz * 9 - E.nx * t; box(.08, rr(1.2, 2.6), .08, M(0xc8232c, { metalness: .4 }), x, .9, z); addCircle(x, z, .12); } } }
   { const b = byName('教學研究大樓'); if (b && b.entrance) { const E = b.entrance; const x = E.x + E.nx * 10, z = E.z + E.nz * 10; for (let k = 0; k < 5; k++) { const leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), M(0xf4f2ec, { roughness: .4 })); leaf.scale.set(.25, 2.2, 1); leaf.position.set(x, 2, z); leaf.rotation.set(rr(-.4, .4), k * 1.25, rr(-.5, .5)); leaf.castShadow = true; scene.add(leaf); } cyl(.8, .9, .4, matConcrete, x, .2, z); addCircle(x, z, 1.2); } }
@@ -2134,10 +2277,16 @@ function animHuman(g, phase, amt, mode = 'walk') {
   if (mode === 'seat') {
     p.lh.rotation.x = p.rh.rotation.x = -1.45; p.lk.rotation.x = p.rk.rotation.x = 1.35;
     p.lh.rotation.z = -.12; p.rh.rotation.z = .12;
-    p.ls.rotation.x = p.rs.rotation.x = -1.05; p.le.rotation.x = p.re.rotation.x = -.35; p.hips.position.y = .93; p.hips.rotation.x = .12;
+    p.ls.rotation.x = p.rs.rotation.x = -1.05; p.le.rotation.x = p.re.rotation.x = -.35; p.hips.position.y = .93; p.hips.rotation.x = .12; p.ls.rotation.z = p.rs.rotation.z = 0;
     return;
   }
-  p.lh.rotation.z = p.rh.rotation.z = 0; p.hips.rotation.x = 0;
+  if (mode === 'bike') { // phase = crank angle
+    p.hips.position.y = .93; p.hips.rotation.x = .32; p.lh.rotation.z = -.05; p.rh.rotation.z = .05;
+    for (const [h, k, o] of [[p.lh, p.lk, 0], [p.rh, p.rk, Math.PI]]) { const c = phase + o; h.rotation.x = -1.02 - .42 * Math.cos(c); k.rotation.x = 1.05 + .55 * Math.cos(c) - .1 * Math.sin(c); }
+    p.ls.rotation.x = p.rs.rotation.x = -1.05; p.le.rotation.x = p.re.rotation.x = -.15; p.ls.rotation.z = -.1; p.rs.rotation.z = .1;
+    return;
+  }
+  p.lh.rotation.z = p.rh.rotation.z = 0; p.hips.rotation.x = 0; p.ls.rotation.z = p.rs.rotation.z = 0;
   const s = Math.sin(phase) * amt;
   p.lh.rotation.x = -s * .65; p.rh.rotation.x = s * .65;
   p.lk.rotation.x = Math.max(0, Math.sin(phase + 1.2)) * amt * .9; p.rk.rotation.x = Math.max(0, Math.sin(phase + 1.2 + Math.PI)) * amt * .9;
@@ -2208,6 +2357,42 @@ function makeScooter(color) {
   const stem = cyl(.03, .03, .8, matSteel, 0, .62, .52, g, 6); stem.rotation.x = -.25;
   return { group: g, wheels: [wf, wb], headM, tailM, bar };
 }
+/* bicycle: city bike (frame colours vary) or YouBike 2.0 (yellow, front basket). ~1.7 m long, 700c wheels. */
+const bTireGeo = new THREE.TorusGeometry(.32, .026, 6, 22).rotateY(Math.PI / 2), bRimGeo = new THREE.CylinderGeometry(.045, .045, .1, 8).rotateZ(Math.PI / 2);
+const spokeGeo = (() => { const parts = []; for (let i = 0; i < 8; i++) parts.push(new THREE.BoxGeometry(.006, .6, .006).rotateX(i * Math.PI / 8)); return mergeGeometries(parts); })();
+function tubeGeo(a, b, r) { const d = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]), L = d.length(); const g = new THREE.CylinderGeometry(r, r, L, 6); g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize())); g.translate((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2); return g; }
+function mergedMesh(geos, mat, parent) { const m = new THREE.Mesh(mergeGeometries(geos.map(g => g.index ? g.toNonIndexed() : g)), mat); m.castShadow = true; parent.add(m); return m; }
+function makeBike(color, yb = false) {
+  const g = new THREE.Group(), fr = M(color, { metalness: .4, roughness: .35 }), black = M(0x1b1b1b, { roughness: .7 }), spokeM = M(0xb8bcc0, { metalness: .8, roughness: .3 });
+  const wf = wheel(g, 0, .33, .52, bTireGeo, bRimGeo, true), wb = wheel(g, 0, .33, -.52, bTireGeo, bRimGeo, false);
+  for (const w of [wf, wb]) w.spin.add(new THREE.Mesh(spokeGeo, spokeM));
+  const BB = [0, .3, -.02], ST = [0, .86, -.2], HT = [0, .88, .36], HB = [0, .66, .41];
+  // frame: every tube in one mesh
+  const F = yb ? [tubeGeo(HB, BB, .03), tubeGeo([0, .55, .2], BB, .03)] : [tubeGeo(ST, HT, .018), tubeGeo(HB, BB, .022)]; // YouBike: step-through
+  F.push(tubeGeo(BB, ST, .02), tubeGeo(BB, [0, .33, -.52], .014), tubeGeo(ST, [0, .33, -.52], .012), tubeGeo(HT, HB, .025));
+  const guard = new THREE.TorusGeometry(.36, .02, 4, 12, Math.PI * .7); guard.rotateX(.4); guard.rotateY(Math.PI / 2); guard.translate(0, .33, -.52); F.push(guard);
+  mergedMesh(F, fr, g);
+  mergedMesh([-.04, .04].map(sx => tubeGeo([sx, .33, -.11], [sx, 0, 0], .012)), fr, wf.pivot); // fork turns with the front wheel
+  // seat post and rear rack (steel), saddle
+  mergedMesh([tubeGeo([0, .9, -.2], ST, .014), tubeGeo([0, .66, -.3], [0, .66, -.72], .01), tubeGeo([0, .66, -.72], [0, .33, -.52], .01)], matSteel, g);
+  box(.13, .05, .25, black, 0, .93, -.22, g);
+  const bar = new THREE.Group(); bar.position.set(0, .98, .33); g.add(bar);
+  mergedMesh([new THREE.CylinderGeometry(.012, .012, .56, 6).rotateZ(Math.PI / 2), tubeGeo([0, -.1, .03], [0, 0, 0], .015)], matSteel, bar);
+  mergedMesh([-1, 1].map(sx => new THREE.CylinderGeometry(.022, .022, .1, 6).rotateZ(Math.PI / 2).translate(sx * .24, 0, 0)), black, bar);
+  const headM = M(0xf6f4ee, { emissive: 0xfff2d2, emissiveIntensity: .05 }), tailM = M(0x6a0808, { emissive: 0xff2414, emissiveIntensity: .25 });
+  box(.07, .06, .05, headM, 0, -.06, .1, bar, false);
+  box(.05, .04, .02, tailM, 0, .62, -.68, g, false);
+  if (yb) { // basket and the white skirt guard
+    box(.36, .24, .28, M(0x2b2b2b, { roughness: .6 }), 0, .1, .2, bar).castShadow = false;
+    const sk = new THREE.Mesh(new THREE.CircleGeometry(.3, 12, Math.PI * .5, Math.PI * .6), M(0xf4f4f0, { side: THREE.DoubleSide })); sk.rotation.y = Math.PI / 2; sk.position.set(.05, .33, -.52); g.add(sk);
+  }
+  // crank set: chainring, two arms with pedals (one mesh, spun as a group)
+  const crank = new THREE.Group(); crank.position.set(0, BB[1], BB[2]); g.add(crank);
+  const C = [new THREE.TorusGeometry(.1, .012, 4, 18).rotateY(Math.PI / 2).translate(.06, 0, 0)];
+  for (const sx of [-1, 1]) { const k = sx > 0 ? 1 : -1; C.push(new THREE.BoxGeometry(.02, .02, .17).translate(sx * .08, 0, .085 * k), new THREE.BoxGeometry(.1, .025, .06).translate(sx * .13, 0, .17 * k)); }
+  mergedMesh(C, matSteel, crank).castShadow = false;
+  return { group: g, wheels: [wf, wb], headM, tailM, bar, crank };
+}
 function makeTruck(color) {
   const g = new THREE.Group(); const c = M(color, { metalness: .3, roughness: .5 });
   box(2.4, 2.3, 2.2, c, 0, 1.75, 4.6, g); box(2.3, .9, .06, matCarGlass, 0, 2.3, 5.71, g, false);
@@ -2218,19 +2403,21 @@ function makeTruck(color) {
 }
 
 const vehicles = [];
+const BIKE_SPOTS = []; // [x, z, heading, kind?] filled while building the racks and YouBike docks
 const CAR_COLORS = [0xf2f2f0, 0xf2f2f0, 0xd9dadc, 0xa8adb2, 0x2a2d31, 0x1b1d20, 0x8f1d1f, 0x1f3f78, 0x5a6e60, 0xc9b79a];
+const BIKE_COLORS = [0x1c1c1e, 0xf3f3f0, 0x2c5ea8, 0xb3231f, 0x5f7f5a, 0x9aa2a8, 0xd98fae, 0x3f8f8c];
 const SCOOTER_COLORS = [0xf3f3f0, 0x1c1c1e, 0xb3231f, 0x2c5ea8, 0x9aa2a8, 0x8fd0c4, 0xf0d26a, 0x7a8b5c];
 function createVehicle(type, x, z, heading, opt = {}) {
-  const kind = type === 'car' ? (opt.kind ?? pick(['sedan', 'sedan', 'sedan', 'suv', 'van', 'taxi'].slice(0, opt.noTaxi ? 5 : 6))) : 'scooter';
-  const b = type === 'car' ? makeCar(opt.color ?? pick(CAR_COLORS), kind) : makeScooter(opt.color ?? pick(SCOOTER_COLORS));
+  const kind = type === 'car' ? (opt.kind ?? pick(['sedan', 'sedan', 'sedan', 'suv', 'van', 'taxi'].slice(0, opt.noTaxi ? 5 : 6))) : type === 'bike' ? (opt.kind ?? 'bike') : 'scooter';
+  const b = type === 'car' ? makeCar(opt.color ?? pick(CAR_COLORS), kind) : type === 'bike' ? makeBike(kind === 'youbike' ? 0xf2b134 : opt.color ?? pick(BIKE_COLORS), kind === 'youbike') : makeScooter(opt.color ?? pick(SCOOTER_COLORS));
   b.group.rotation.order = 'YXZ'; scene.add(b.group);
   b.group.traverse(o => { if (o.isMesh) o.castShadow = false; }); b.group.children.find(o => o.isMesh).castShadow = true;
   const v = { type, kind, ...b, mesh: b.group, pos: new THREE.Vector3(x, 0, z), heading, speed: 0, steer: 0, lean: 0, pitch: 0, braking: false,
-    circles: type === 'car' ? [{ o: 1.3, r: 1.0 }, { o: -1.3, r: 1.0 }] : [{ o: .45, r: .42 }, { o: -.45, r: .42 }], npc: null };
+    circles: type === 'car' ? [{ o: 1.3, r: 1.0 }, { o: -1.3, r: 1.0 }] : type === 'bike' ? [{ o: .45, r: .24 }, { o: -.45, r: .24 }] : [{ o: .45, r: .42 }, { o: -.45, r: .42 }], npc: null, crankA: 0 };
   vehicles.push(v); syncVehicle(v); return v;
 }
 function syncVehicle(v) {
-  const L = v.type === 'car' ? 2.6 : 1.2;
+  const L = v.type === 'car' ? 2.6 : v.type === 'bike' ? 1.04 : 1.2;
   const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
   const hf = groundY(v.pos.x + fx * L / 2, v.pos.z + fz * L / 2), hb = groundY(v.pos.x - fx * L / 2, v.pos.z - fz * L / 2);
   v.pitch = Math.atan2(hf - hb, L); v.pos.y = (hf + hb) / 2;
@@ -2240,6 +2427,7 @@ function syncVehicle(v) {
 function spawnParked() {
   const cap = { P1: 14, P2: 12, P3: 10, P4: 14, P5: 10, P6: 16, P7: 8, M1: 120, M2: 16 };
   for (const L of LOTS) { let n = 0; for (const [x, z, hd] of L.stalls) { if (n >= (cap[L.id] ?? 8)) break; n++; createVehicle(L.t, x, z, hd + rr(-.04, .04), { noTaxi: true }); } }
+  for (const [x, z, hd, kind] of BIKE_SPOTS) createVehicle('bike', x, z, hd, { kind });
 }
 
 function spawnNpcCars() {
@@ -2309,6 +2497,7 @@ const LINES = {
   walk: ['今天第一節有點名嗎？', '燕巢的風也太大了吧', '學餐今天吃什麼？', '期中考你讀了沒…', '等等要去 7-11 嗎？', '第一校區真的好大', '你也是資管的嗎？', '下午那堂可以翹嗎', '報告分組還缺一個人欸', '社團今晚有練習喔', '好想睡覺…', '公車又要等半小時了', '這學期學分好重', '中山高好吵喔', '晚點一起去吃飯？', '教授說下週要小考', '我的機車停哪了…', '借我抄一下筆記～', '今天天氣不錯欸', '剛剛的簡報好緊張'],
   run: ['跑這麼快，趕點名喔？', '小心不要跌倒～', '哇，是在練體適能嗎', '慢慢來啦！'],
   ride: ['校園裡騎慢一點啦！', '欸欸欸，看路！', '好帥的車喔', '這裡是人行道欸！'],
+  bike: ['騎腳踏車上橋很累吧～', 'YouBike 記得還車喔', '好環保喔！', '借過借過～', '下坡騎慢點啦'],
   night: ['晚上的燕巢好暗喔', '要不要去吃宵夜？', '宿舍門禁快到了…', '聽說工學院頂樓晚上有人在彈吉他…'],
   scared: ['嚇死人喔！', '會不會騎車啊！', '叭什麼叭啦', '哇啊啊——'],
   zone: { '圖書': ['噓～圖書館要安靜', '我在找期末報告的資料'], '行政': ['要去註冊組嗎？', '有隻黑狗常在行政大樓前面晃'], '鴴池': ['聽說在鴴池旁邊跳三下可以 All Pass', '池子裡有烏龜喔'], '大學橋': ['從橋上看國道車流好療癒', '這座橋好高'], '管理': ['C 棟電梯又在排隊了', '管院的廣場花開得好漂亮'], '電機': ['期末專題還沒 demo…', '電腦教室冷氣好冷'], '工學': ['實驗報告寫不完', '工學院頂樓晚上好像怪怪的'], '活動中心': ['社團博覽會在哪裡？', '學餐在一樓喔'], '游泳': ['游泳課要戴泳帽喔'], '樂群': ['宿舍門禁幾點啊？'], '敬業': ['宿舍網路又斷了'], '外語': ['Good morning～ 今天要上口說課'], '財金': ['股票今天又綠了…'] },
@@ -2345,10 +2534,10 @@ function passingRemarks(dt) {
   for (const p of peds) {
     if (p.state !== 'walk' || p.role || p.hidden || (p.cool || 0) > performance.now() / 1000) continue;
     const d = p.g.position.distanceTo(src);
-    if (veh ? (d > 7 || Math.abs(veh.speed) < 3) : d > 3.2) continue;
+    if (veh ? (d > 7 || Math.abs(veh.speed) < (veh.type === 'bike' ? 2 : 3)) : d > 3.2) continue;
     if (rnd() > (veh ? .5 : .03)) continue;
     let pool = LINES.walk;
-    if (veh) pool = Math.abs(veh.speed) > 9 ? LINES.ride.slice(0, 2).concat(LINES.ride[3]) : LINES.ride;
+    if (veh) pool = veh.type === 'bike' ? LINES.bike : Math.abs(veh.speed) > 9 ? LINES.ride.slice(0, 2).concat(LINES.ride[3]) : LINES.ride;
     else if (player.speed > 5) pool = LINES.run;
     else if (isNight && rnd() < .6) pool = LINES.night;
     else { const z = zoneLines(curZone || ''); if (z && rnd() < .6) pool = z; }
@@ -2589,7 +2778,7 @@ function actionInfo() {
     if (t.p.role === 'lost' && freshman.state !== 'follow') return { label: '問路', go: () => talkTo(t.p) };
     return { label: '搭話', go: () => talkTo(t.p) };
   }
-  if (v) return { label: v.type === 'car' ? (v.npc ? '搶車' : '上車') : '騎車', go: toggleVehicle };
+  if (v) return { label: v.type === 'car' ? (v.npc ? '搶車' : '上車') : v.type === 'bike' ? (v.kind === 'youbike' ? '借 YouBike' : '騎腳踏車') : '騎車', go: toggleVehicle };
   return null;
 }
 function doAction() { const a = actionInfo(); if (a) a.go(); }
@@ -2745,7 +2934,7 @@ function updateTouchUI() {
   const a = actionInfo(), act = $('act'), lbl = a ? a.label : '';
   if (lbl !== lastAct) { lastAct = lbl; act.hidden = !a; if (a) { act.textContent = lbl; act.style.animation = 'none'; void act.offsetWidth; act.style.animation = ''; } }
   const inV = !!player.vehicle;
-  $('bJump').textContent = inV ? '煞車' : '跳'; $('bHorn').hidden = !inV;
+  $('bJump').textContent = inV ? '煞車' : '跳'; $('bHorn').hidden = !inV; $('bHorn').textContent = inV && player.vehicle.type === 'bike' ? '鈴鐺' : '喇叭';
 }
 function axes() {
   let f = 0, r = 0;
@@ -2771,6 +2960,7 @@ function horn() {
   if (player.vehicle) for (const p of peds) if (p.state === 'walk' && !p.role && p.g.position.distanceTo(player.vehicle.pos) < 18) { startFlee(p, player.vehicle.pos); if (rnd() < .4) say(p.g, pick(LINES.scared), 2); }
   if (!actx || muted || !player.vehicle) return;
   const t = actx.currentTime, g = actx.createGain(); g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .45); g.connect(actx.destination);
+  if (player.vehicle.type === 'bike') { for (const t0 of [0, .16]) { const gb = actx.createGain(); gb.gain.setValueAtTime(.09, t + t0); gb.gain.exponentialRampToValueAtTime(.001, t + t0 + .5); gb.connect(actx.destination); for (const fq of [2093, 2637]) { const o = actx.createOscillator(); o.type = 'sine'; o.frequency.value = fq; o.connect(gb); o.start(t + t0); o.stop(t + t0 + .5); } } return; } // 叮叮
   for (const fq of player.vehicle.type === 'car' ? [392, 494] : [620, 740]) { const o = actx.createOscillator(); o.type = 'square'; o.frequency.value = fq; o.connect(g); o.start(t); o.stop(t + .45); }
 }
 
@@ -2791,11 +2981,13 @@ function toggleVehicle() {
   v.npc = null; v.speed = 0;
   player.vehicle = v;
   if (v.type === 'car') { player.g.visible = false; }
+  else if (v.type === 'bike') { v.mesh.add(player.g); player.g.position.set(0, -.02, -.3); player.g.rotation.set(0, 0, 0); animHuman(player.g, v.crankA, 1, 'bike'); }
   else { v.mesh.add(player.g); player.g.position.set(0, -.06, -.2); player.g.rotation.set(0, 0, 0); animHuman(player.g, 0, 0, 'seat'); }
   v.mesh.add(headlight); v.mesh.add(headlight.target);
   headlight.position.set(0, v.type === 'car' ? .8 : 1, v.type === 'car' ? 2.3 : .6);
-  camYaw = v.heading + Math.PI; camDist = v.type === 'car' ? 8 : 5.5; camPitch = .22;
-  $('speedo').hidden = false; $('vehName').textContent = v.type === 'car' ? ({ sedan: '轎車', suv: '休旅車', van: '廂型車', taxi: '計程車' }[v.kind] || '汽車') : '機車';
+  camYaw = v.heading + Math.PI; camDist = v.type === 'car' ? 8 : v.type === 'bike' ? 4.8 : 5.5; camPitch = .22;
+  $('speedo').hidden = false; $('vehName').textContent = v.type === 'car' ? ({ sedan: '轎車', suv: '休旅車', van: '廂型車', taxi: '計程車' }[v.kind] || '汽車') : v.type === 'bike' ? (v.kind === 'youbike' ? 'YouBike' : '腳踏車') : '機車';
+  if (v.kind === 'youbike' && !v.rented) { v.rented = true; toast('嗶！YouBike 租借成功（前 30 分鐘 5 元）'); }
 }
 function exitVehicle(force) {
   const v = player.vehicle; if (!v) return;
@@ -2803,7 +2995,7 @@ function exitVehicle(force) {
   const off = v.type === 'car' ? 1.7 : .9;
   let ex = v.pos.x + fz * off, ez = v.pos.z - fx * off;
   const pu = pushOut(ex, ez, .35, v.pos.y); if (Math.hypot(pu.x, pu.z) > .3) { ex = v.pos.x - fz * off; ez = v.pos.z + fx * off; }
-  if (v.type === 'scooter') { v.mesh.remove(player.g); scene.add(player.g); }
+  if (v.type !== 'car') { v.mesh.remove(player.g); scene.add(player.g); }
   player.g.visible = true;
   v.mesh.remove(headlight); v.mesh.remove(headlight.target); headlight.intensity = 0;
   player.pos.set(ex, groundY(ex, ez), ez); player.yaw = v.heading; player.vehicle = null; player.vy = 0;
@@ -2839,9 +3031,12 @@ function updatePlayer(dt) {
   animHuman(player.g, player.phase, clamp(player.speed / 4, 0, 1.25), player.onGround ? 'walk' : 'air');
   player.g.position.copy(player.pos); player.g.rotation.y = player.yaw;
 }
+/* top speeds (m/s): car 90 km/h, scooter 60 km/h; a bike tops out around 27 km/h on the flat */
+const VMAX = { car: 25, scooter: 60 / 3.6, bike: 7.5 };
 function driveVehicle(v, dt, inp) {
   const car = v.type === 'car';
-  const maxF = car ? 34 : 22, acc = car ? 8.5 : 7.5, maxR = car ? 8 : 3;
+  if (v.type === 'bike') return rideBike(v, dt, inp);
+  const maxF = VMAX[v.type], acc = car ? 8.5 : 7.5, maxR = car ? 8 : 3;
   if (inp.fwd) v.speed += (v.speed < 0 ? acc * 2.4 : acc * (1 - Math.max(0, v.speed) / maxF * .55)) * dt;
   if (inp.back) { if (v.speed > .3) v.speed -= 20 * dt; else v.speed -= acc * .6 * dt; }
   if (!inp.fwd && !inp.back) v.speed -= Math.sign(v.speed) * Math.min(Math.abs(v.speed), (1.6 + Math.abs(v.speed) * .04) * dt);
@@ -2865,6 +3060,34 @@ function driveVehicle(v, dt, inp) {
   if (v.bar) v.bar.rotation.y = v.steer * .8;
   v.tailM.emissiveIntensity = v.braking ? 2.2 : (isNight || (lightsOn && v === player.vehicle) ? .9 : .25);
   v.headM.emissiveIntensity = (isNight || lightsOn) && (v === player.vehicle || v.npc) ? 3 : .05;
+  syncVehicle(v);
+}
+/* pedal power instead of a throttle: ~4 W/kg (fit student) against air drag and the slope, so the 6.7 % bridge
+   approaches drop you to ~16 km/h going up and you coast to ~30 km/h coming down */
+function rideBike(v, dt, inp) {
+  const slope = 9.8 * Math.sin(v.pitch), sp = v.speed;
+  let a = -slope - .0095 * sp * Math.abs(sp) - Math.sign(sp) * .1;
+  if (inp.fwd) a += sp < 0 ? 4 : Math.min(2.6, 4 / Math.max(.6, sp));
+  if (inp.back) a += sp > .2 ? -6 : -1.4;
+  v.speed += a * dt;
+  if (inp.brake || (inp.back && sp > .2)) { if (inp.brake) v.speed -= Math.sign(v.speed) * Math.min(Math.abs(v.speed), 7 * dt); if (sp > 0 && v.speed < 0) v.speed = 0; }
+  if (!inp.fwd && !inp.back && Math.abs(v.speed) < .6 && Math.abs(slope) < 1.5) v.speed = 0; // foot down
+  if (!onPaved(v.pos.x, v.pos.z) && Math.abs(v.speed) > 5) v.speed -= Math.sign(v.speed) * 3 * dt;
+  v.speed = clamp(v.speed, -1.2, 14);
+  v.braking = inp.brake || (inp.back && v.speed > .2);
+  const tgt = inp.steer * .72 / (1 + Math.abs(v.speed) * .06);
+  v.steer = lerp(v.steer, tgt, 1 - Math.exp(-(Math.abs(tgt) < Math.abs(v.steer) ? 16 : 10) * dt));
+  let yaw = v.speed / 1.04 * Math.tan(v.steer); const maxYaw = 7 / Math.max(2, Math.abs(v.speed)); yaw = clamp(yaw, -maxYaw, maxYaw);
+  v.heading += yaw * dt;
+  moveVehicle(v, dt);
+  v.lean = lerp(v.lean, clamp(-yaw * Math.abs(v.speed) * .06, -.5, .5), 1 - Math.exp(-6 * dt));
+  for (const w of v.wheels) { w.spin.rotation.x += v.speed * dt / .34; if (w.front) w.pivot.rotation.y = v.steer; }
+  v.bar.rotation.y = v.steer;
+  if (inp.fwd && v.speed > 0) v.crankA += v.speed * dt / (.34 * 2.4) + dt * .8; // pedalling (2.4 m per crank turn, plus a little effort uphill)
+  v.crank.rotation.x = v.crankA;
+  if (v === player.vehicle) animHuman(player.g, v.crankA, 1, 'bike');
+  v.tailM.emissiveIntensity = v.braking ? 1.6 : (isNight || (lightsOn && v === player.vehicle) ? .9 : .25);
+  v.headM.emissiveIntensity = (isNight || lightsOn) && v === player.vehicle ? 2 : .05;
   syncVehicle(v);
 }
 function moveVehicle(v, dt) {
@@ -2891,10 +3114,10 @@ function moveVehicle(v, dt) {
     }
   }
   // hit pedestrians
-  if (Math.abs(v.speed) > 3.5) for (const p of peds) {
+  if (Math.abs(v.speed) > (v.type === 'bike' ? 5.5 : 3.5)) for (const p of peds) {
     if (p.state === 'down') continue;
     const d = Math.hypot(p.g.position.x - v.pos.x, p.g.position.z - v.pos.z);
-    if (d < (v.type === 'car' ? 2.1 : 1.1)) {
+    if (d < (v.type === 'car' ? 2.1 : v.type === 'bike' ? .9 : 1.1)) {
       p.state = 'down'; p.timer = 5; p.vel.set(Math.sin(v.heading) * v.speed * .5, 3.5, Math.cos(v.heading) * v.speed * .5);
       v.speed *= .8; if (v === player.vehicle) shake = .4;
     }
@@ -3136,7 +3359,8 @@ function loop(now) {
     updateZone(dt);
     if (player.vehicle) $('spd').textContent = Math.round(Math.abs(player.vehicle.speed) * 3.6);
     headlight.intensity = player.vehicle && (lightsOn || isNight) ? 180 : 0;
-    if (eng && player.vehicle) { const v = player.vehicle, r = Math.abs(v.speed) / (v.type === 'car' ? 34 : 22); const base = v.type === 'car' ? 38 : 70; const gear = v.type === 'car' ? (r * 5) % 1 : r; eng.o1.frequency.value = base + gear * base * 2.2 + r * 40; eng.o2.frequency.value = eng.o1.frequency.value * .502; eng.f.frequency.value = 300 + r * 1400; eng.g.gain.value = muted ? 0 : .035 + r * .03; }
+    if (eng && player.vehicle && player.vehicle.type === 'bike') eng.g.gain.value = 0;
+    else if (eng && player.vehicle) { const v = player.vehicle, r = Math.abs(v.speed) / VMAX[v.type]; const base = v.type === 'car' ? 38 : 70; const gear = v.type === 'car' ? (r * 5) % 1 : r; eng.o1.frequency.value = base + gear * base * 2.2 + r * 40; eng.o2.frequency.value = eng.o1.frequency.value * .502; eng.f.frequency.value = 300 + r * 1400; eng.g.gain.value = muted ? 0 : .035 + r * .03; }
     drawMini();
     if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('on'); }
   } else {
@@ -3187,7 +3411,7 @@ addEventListener('hashchange', () => {
 /* ================= boot ================= */
 async function boot() {
   try { await Promise.race([Promise.all([document.fonts.load(`900 64px "Noto Sans TC"`), document.fonts.load(`600 64px Teko`)]), new Promise(r => setTimeout(r, 2500))]); } catch (e) { }
-  buildGround(); buildRoads(); buildFreeway(); buildBridge();
+  buildGround(); buildRoads(); buildFreeway(); buildBridge(); buildApproaches();
   await loadPlans();
   for (const b of SURVEY.bld) buildBuilding(b);
   buildLots(); buildSports(); buildGates(); buildBoundary(); buildFurniture();
