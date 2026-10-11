@@ -448,6 +448,8 @@ const ROADS = SURVEY.roads.map(r => {
 });
 const roadBy = n => ROADS.find(r => r.n === n);
 const CAR_ROADS = ROADS.filter(r => r.t === 'car' && !r.freeway);
+/* is (x,z) on (or within m of) the asphalt of a drivable road? used to keep street furniture off the carriageway */
+const onCarRoad = (x, z, m = 0) => CAR_ROADS.some(r => inBox(x, z, r.box, m + 1) && lineDist(x, z, r.p, r.closed)[0] < r.half + m);
 
 /* ---------- bridge approaches ----------
    The 7 m deck lands on an abutment pad at each end; the roads turn 90° there and run down beside the freeway
@@ -812,7 +814,7 @@ function buildBuilding(b) {
     const g = new THREE.Group(); g.position.set(E.x - E.nx * setback, 0, E.z - E.nz * setback); g.rotation.y = Math.atan2(E.nx, E.nz); scene.add(g);
     const small = h < 9;
     for (const sx of [-1, 1]) box(DOOR.w / 2 - .1, DOOR.h - .1, .05, matGlassDark, sx * (DOOR.w / 2 + DOOR.w / 4 + .05), DOOR.h / 2, .02, g, false); // glass side lights beside the doorway
-    if (!L.arcade && !small && !L.portal) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
+    if (!L.arcade && !small && !L.portal && !onCarRoad(E.x + E.nx * 3.9, E.z + E.nz * 3.9, .5)) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
     if (!small) box(L.arcade ? 18 : 10, .03, L.arcade ? 3 : 2.4, matConcrete, 0, .015, (L.arcade ? 1.5 : 1.2), g, false); // flush landing (no step blocks to clip through)
     const signW = Math.min(small ? 6 : 14, E.len * .5);
     const st = textTex([name, L.en + (L.c ? ` · ${L.c}` : '')], { w: 1024, h: 200, bg: '#22313b', fg: '#f6f1e7', sizes: [name.length > 9 ? 64 : 86, 34] });
@@ -1970,6 +1972,7 @@ function buildSports() {
   for (const s of [-1, 1]) { const [x, z] = T(s * 50, 0); paint(x, z, 60, .15, 0xffffff, .07, tk.rot); }
   for (const s of [-1, 1]) { const [x, z] = T(0, s * 30); paint(x, z, .15, 100, 0xffffff, .07, tk.rot); }
   for (const s of [-1, 1]) { const [gx, gz] = T(s * 50, 0); const goal = new THREE.Group(); goal.position.set(gx, 0, gz); goal.rotation.y = tk.rot; scene.add(goal); box(.12, 2.44, .12, matWhite, -3.66, 1.22, 0, goal); box(.12, 2.44, .12, matWhite, 3.66, 1.22, 0, goal); for (const lx of [-3.66, 3.66]) addCircle(gx + lx * Math.cos(tk.rot), gz - lx * Math.sin(tk.rot), .15); box(7.44, .12, .12, matWhite, 0, 2.44, 0, goal); }
+  pavedPolys.push(S('運動場').p); // nothing grows on the track or the pitch
   zone('運動場', '400m 跑道＋足球場', bboxOf(S('運動場').p), '運動場', 2); mapFills.push({ pts: S('運動場').p, c: '#b4553f' });
   // courts
   const courts = (sp, n, kind) => {
@@ -2107,7 +2110,7 @@ function streetOK(x, z) {
 }
 function occupied(x, z, pad = 0) {
   for (const c of colliders) if (inBox(x, z, c.box, pad + 2) && (inPoly(x, z, c.pts) || polyEdgeDist(x, z, c.pts) < pad + 1.5)) return true;
-  for (const r of ROADS) if (!r.out && inBox(x, z, r.box, pad + 4) && lineDist(x, z, r.p, r.closed)[0] < r.half + (r.t === 'car' && r.w >= 6 ? SW_OFF + 1.5 : .6) + pad) return true;
+  for (const r of ROADS) if (!r.freeway && inBox(x, z, r.box, pad + 4) && lineDist(x, z, r.p, r.closed)[0] < r.half + (r.out ? .8 : r.t === 'car' && r.w >= 6 ? SW_OFF + 1.5 : .6) + pad) return true;
   for (const p of pavedPolys) if (inPoly(x, z, p)) return true;
   if (inBox(x, z, BRIDGE_BOX, 6) || groundY(x, z) > .3) return true;
   return false;
@@ -2118,7 +2121,10 @@ function buildFurniture() {
   const AL = polyLen(ax.p);
   for (let s = 4; s < AL - 3; s += 9) { const [x, z, tx, tz] = sampleLine(ax.p, s); for (const sg of [-1, 1]) treeSpots.terminalia.push([x - tz * sg * 6.8, z + tx * sg * 6.8]); }
   const rackMat = M(0xc8ccd0, { metalness: .9, roughness: .25 });
-  for (let s = 20; s < AL - 10; s += 60) for (let k = 0; k < 8; k++) { const [x, z, tx, tz] = sampleLine(ax.p, s + k * 1.1); const rx = x - tz * 4.3, rz = z + tx * 4.3; const r = new THREE.Mesh(new THREE.TorusGeometry(.38, .03, 6, 16, Math.PI), rackMat); r.position.set(rx, 0, rz); r.rotation.y = Math.atan2(-tz, tx) + Math.PI / 2; scene.add(r); addCircle(rx, rz, .42);
+  for (let s = 20; s < AL - 10; s += 60) for (let k = 0; k < 8; k++) { const [x, z, tx, tz] = sampleLine(ax.p, s + k * 1.1); const rx = x - tz * 4.3, rz = z + tx * 4.3;
+    if ([0, 1].some(d => { const [qx, qz, ux, uz] = sampleLine(ax.p, s + d * 7.7); return onCarRoad(qx - uz * 4.3, qz + ux * 4.3, 2.5); })) break; // the whole row stays off the roads crossing the axis
+    const r = new THREE.Mesh(new THREE.TorusGeometry(.38, .03, 6, 16, Math.PI), rackMat); r.position.set(rx, 0, rz); r.rotation.y = Math.atan2(-tz, tx) + Math.PI / 2; scene.add(r);
+    for (const o of [-.38, .38]) addCircle(rx + tz * o, rz - tx * o, .05); // a U rack is two thin legs, not a solid post
     if (k < 7 && rnd() < .35) { const [x2, z2] = sampleLine(ax.p, s + k * 1.1 + .55); BIKE_SPOTS.push([x2 - tz * 4.3, z2 + tx * 4.3, Math.atan2(-tz, tx) + (rnd() < .5 ? 0 : Math.PI)]); } }
   // street lamps: slim single poles with a flat square head
   const lamps = lampSpots.filter(([x, z]) => Math.hypot(x - RB.x, z - RB.z) > 17 && !pavedPolys.some(p => inPoly(x, z, p))).filter(([x, z]) => !CAR_ROADS.some(r => inBox(x, z, r.box) && lineDist(x, z, r.p, r.closed)[0] < r.half + .3) && !colliders.some(c => inBox(x, z, c.box) && inPoly(x, z, c.pts)));
@@ -2141,7 +2147,12 @@ function buildFurniture() {
   const bolMat = [M(0xc8232c), M(0xf2c23a)];
   for (const r of ROADS.filter(r => r.t === 'ped' && !r.bridge && !r.n.includes('圓形廣場') && !r.n.includes('木棧'))) for (const p of [r.raw[0], r.raw[r.raw.length - 1]]) {
     if (groundY(p[0], p[1]) > .3) continue;
-    for (const k of [-1, 1]) { const u = new THREE.Mesh(new THREE.TorusGeometry(.45, .05, 6, 14, Math.PI), bolMat[(k + 1) / 2]); u.position.set(p[0] + k * .9, 0, p[1]); scene.add(u); addCircle(p[0] + k * .9, p[1], .5); }
+    // stand on the footpath, set back from the kerb, across the path: people and bikes pass between, cars don't
+    const first = p === r.raw[0], q = first ? r.raw[1] : r.raw[r.raw.length - 2]; let tx = q[0] - p[0], tz = q[1] - p[1]; const tl = Math.hypot(tx, tz); tx /= tl; tz /= tl;
+    let d = .6; while (d < Math.min(tl, 12) && onCarRoad(p[0] + tx * d, p[1] + tz * d, 2.2)) d += .5;
+    if (d >= Math.min(tl, 12)) continue;
+    const cx = p[0] + tx * d, cz = p[1] + tz * d;
+    for (const k of [-1, 1]) { const bx = cx - tz * k * .9, bz = cz + tx * k * .9; const u = new THREE.Mesh(new THREE.TorusGeometry(.45, .05, 6, 14, Math.PI), bolMat[(k + 1) / 2]); u.position.set(bx, groundY(bx, bz), bz); u.rotation.y = Math.atan2(tx, tz) + Math.PI / 2; scene.add(u); for (const o of [-.45, 0, .45]) addCircle(bx - tz * o, bz + tx * o, .1); }
   }
   // YouBike docks: 財金學院, 西校區大門, 游泳館
   const yb = (x, z, rot) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g); box(.6, 1.6, .5, M(0xf2b134), -5, .8, 0, g); for (let i = 0; i < 8; i++) { box(.12, .9, .2, M(0x5b5f63), -3.6 + i * 1, .45, 0, g); if (rnd() < .6) { const lx = -3.6 + i * 1, lz = 1.15; BIKE_SPOTS.push([x + lx * Math.cos(rot) + lz * Math.sin(rot), z - lx * Math.sin(rot) + lz * Math.cos(rot), rot + Math.PI, 'youbike']); } } addColPoly([[x - 6, z - .4], [x + 6, z - .4], [x + 6, z + .35], [x - 6, z + .35]].map(([px, pz]) => { const dx = px - x, dz = pz - z; return [x + dx * Math.cos(rot) + dz * Math.sin(rot), z - dx * Math.sin(rot) + dz * Math.cos(rot)]; })); };
@@ -2153,7 +2164,7 @@ function buildFurniture() {
     for (const side of [1, -1]) { const x0 = E.x + E.nx * 4 + E.nz * side * 4.5, z0 = E.z + E.nz * 4 - E.nx * side * 4.5; if (occupied(x0, z0, .5)) continue; for (let k = 0; k < 3; k++) { const x = x0 + E.nz * side * k * .8, z = z0 - E.nx * side * k * .8; if (!occupied(x, z, .3)) BIKE_SPOTS.push([x, z, Math.atan2(E.nx, E.nz) + rr(-.1, .1)]); } break; } }
   // sculptures: red steel "number fence" in front of 外語學院, white leaf sculpture in front of 教學研究大樓
   { const b = byName('外語學院'); if (b && b.entrance) { const E = b.entrance; for (let k = 0; k < 14; k++) { const t = 14 + (k - 6.5) * .7, x = E.x + E.nx * 9 + E.nz * t, z = E.z + E.nz * 9 - E.nx * t; box(.08, rr(1.2, 2.6), .08, M(0xc8232c, { metalness: .4 }), x, .9, z); addCircle(x, z, .12); } } }
-  { const b = byName('教學研究大樓'); if (b && b.entrance) { const E = b.entrance; const x = E.x + E.nx * 10, z = E.z + E.nz * 10; for (let k = 0; k < 5; k++) { const leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), M(0xf4f2ec, { roughness: .4 })); leaf.scale.set(.25, 2.2, 1); leaf.position.set(x, 2, z); leaf.rotation.set(rr(-.4, .4), k * 1.25, rr(-.5, .5)); leaf.castShadow = true; scene.add(leaf); } cyl(.8, .9, .4, matConcrete, x, .2, z); addCircle(x, z, 1.2); } }
+  { const b = byName('教學研究大樓'); if (b && b.entrance) { const E = b.entrance; let k = 10; while (k > 4 && onCarRoad(E.x + E.nx * k, E.z + E.nz * k, 2)) k -= .5; const x = E.x + E.nx * k, z = E.z + E.nz * k; for (let k = 0; k < 5; k++) { const leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), M(0xf4f2ec, { roughness: .4 })); leaf.scale.set(.25, 2.2, 1); leaf.position.set(x, 2, z); leaf.rotation.set(rr(-.4, .4), k * 1.25, rr(-.5, .5)); leaf.castShadow = true; scene.add(leaf); } cyl(.8, .9, .4, matConcrete, x, .2, z); addCircle(x, z, 1.2); } }
   // compass sculpture between the library and the student activity center (from a campus travel blog)
   { const J = byName('圖書資訊大樓'), K = byName('學生活動中心'); if (J && K) { const [jx, jz] = centroid(J.pts), [kx, kz] = centroid(K.pts); let best = null; for (let t = .3; t <= .7; t += .05) { const x = lerp(jx, kx, t), z = lerp(jz, kz, t); if (!occupied(x, z, 5)) { best = [x, z]; break; } } if (best) { const [x, z] = best; const cp = new THREE.Mesh(new THREE.CircleGeometry(6, 40).rotateX(-Math.PI / 2), matTile); cp.position.set(x, .035, z); scene.add(cp); const ringS = new THREE.Mesh(new THREE.TorusGeometry(2.2, .14, 10, 40), matSteel); ringS.position.set(x, 2.6, z); ringS.castShadow = true; scene.add(ringS); const r2 = ringS.clone(); r2.rotation.y = Math.PI / 2; scene.add(r2); const nd = box(.2, .2, 4.4, M(0xb4553f, { metalness: .4 }), x, 2.6, z); nd.rotation.x = .3; cyl(.4, .6, .8, matConcrete, x, .4, z); addCircle(x, z, .8); zone('羅盤', '圖書資訊大樓與學生活動中心之間', { minX: x - 7, maxX: x + 7, minZ: z - 7, maxZ: z + 7 }, '羅盤', 3); pavedPolys.push([[x - 6, z - 6], [x + 6, z - 6], [x + 6, z + 6], [x - 6, z + 6]]); } } }
 }
@@ -2426,8 +2437,16 @@ function syncVehicle(v) {
 
 function spawnParked() {
   const cap = { P1: 14, P2: 12, P3: 10, P4: 14, P5: 10, P6: 16, P7: 8, M1: 120, M2: 16 };
-  for (const L of LOTS) { let n = 0; for (const [x, z, hd] of L.stalls) { if (n >= (cap[L.id] ?? 8)) break; n++; createVehicle(L.t, x, z, hd + rr(-.04, .04), { noTaxi: true }); } }
-  for (const [x, z, hd, kind] of BIKE_SPOTS) createVehicle('bike', x, z, hd, { kind });
+  const clash = (t, x, z, hd) => { const r = t === 'car' ? 1 : .42, o = t === 'car' ? 1.3 : .45; return vehicles.some(v => v.circles.some(c => [-o, o].some(k => Math.hypot(x + Math.sin(hd) * k - v.pos.x - Math.sin(v.heading) * c.o, z + Math.cos(hd) * k - v.pos.z - Math.cos(v.heading) * c.o) < r + c.r))); };
+  for (const L of LOTS) { let n = 0; for (const [x, z, hd] of L.stalls) { if (n >= (cap[L.id] ?? 8)) break; const h = hd + rr(-.04, .04); if (clash(L.t, x, z, h)) continue; n++; createVehicle(L.t, x, z, h, { noTaxi: true }); } }
+  // a bike only goes where both wheels are clear of trees, posts and walls (and of the bike next to it)
+  const taken = [];
+  for (const [x, z, hd, kind] of BIKE_SPOTS) {
+    const fx = Math.sin(hd), fz = Math.cos(hd), pts = [[x + fx * .45, z + fz * .45], [x - fx * .45, z - fz * .45]];
+    if (pts.some(([px, pz]) => { const p = pushOut(px, pz, .3, groundY(px, pz), true); return Math.hypot(p.x, p.z) > .01; })) continue;
+    if (taken.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < .7)) continue;
+    taken.push([x, z]); createVehicle('bike', x, z, hd, { kind });
+  }
 }
 
 function spawnNpcCars() {
@@ -3396,6 +3415,8 @@ window.GTA = {
   lite() { renderer.shadowMap.enabled = false; renderer.setPixelRatio(1); sun.castShadow = false; },
   plan(name, k) { const I = INTERIORS.find(i => i.name === name), G = I.plan.grids ? I.plan.grids[Math.min(k, I.plan.grids.length - 1)] : k ? I.plan.up : I.plan.gr; const inst = []; I.group.traverse(o => { if (o.isInstancedMesh) { const m = new THREE.Matrix4(), p = new THREE.Vector3(); for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, m); p.setFromMatrixPosition(m); const y0 = I.levels[k], y1 = k + 1 < I.levels.length ? I.levels[k + 1] : I.h; if (p.y >= y0 - .05 && p.y < y1 - .3) inst.push([+p.x.toFixed(2), +p.z.toFixed(2)]); } } });
     return { nu: G.nu, nv: G.nv, u0: G.u0, v0: G.v0, F: G.F, lab: Array.from(G.lab), room: Array.from(G.room), rooms: G.rooms.map(r => ({ id: r.id, type: r.type, doors: (r.doors || []).map(d => d.P) })), cores: I.cores, poly: I.poly, walls: walls.filter(w => w.yMin <= I.levels[k] + .1 && w.yMax >= I.levels[k] + .1 && inBox(w.x1, w.z1, I.box)).map(w => [w.x1, w.z1, w.x2, w.z2]), inst }; },
+  enter(v) { if (player.vehicle) exitVehicle(true); player.pos.set(v.pos.x, v.pos.y, v.pos.z); const f = nearestVehicle; nearestVehicle = () => v; try { toggleVehicle(); } finally { nearestVehicle = f; } },
+  dbg() { const cs = new Set(); for (const a of grid.values()) for (const o of a) cs.add(o); return { circles: [...cs], colliders, walls, ROADS, treeSpots, pavedPolys, LOTS, BIKE_SPOTS, lampSpots }; },
   get survey() { return SURVEY; }, eggs() { return [...EGGS]; }, action() { const a = actionInfo(); return a && a.label; }, doAction, get peds() { return peds; }, get dog() { return dog; }, get freshman() { return freshman; }, bubbles() { return bubbles.map(b => b.el.textContent); },
   setNight(v) { isNight = v; applyTime(); }, setTime(m) { gameMin = m; }, life(dt = 1 / 60) { lifeTick(dt, true); return { key: lifeKey, crowd: crowd.filter(c => c.g.visible).map(c => c.kind), seated: lifeMesh ? lifeMesh.geometry.index.count / 36 / 15 : 0, sch: schedule() }; }, step(n) { for (let i = 0; i < n; i++) { updatePeds(1 / 60); updateDog(1 / 60); passingRemarks(1 / 60); ghostTick(1 / 60); updateZone(1 / 60); } }, get lots() { return LOTS.map(l => [l.id, l.stalls.length]); },
   roomAt(I, x, z, k) { const G = I.plan.grids ? I.plan.grids[Math.min(k, I.plan.grids.length - 1)] : k === 0 ? I.plan.gr : I.plan.up; const c = gI(G, ...gUV(G, x, z)); return c < 0 ? -2 : G.room[c]; },
