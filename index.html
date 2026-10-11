@@ -48,6 +48,19 @@ body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-ui);o
 #tip{left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);font-size:12px;color:var(--muted);letter-spacing:.08em;white-space:nowrap;}
 #toast{left:50%;top:calc(44px + env(safe-area-inset-top,0px));transform:translateX(-50%);font-weight:700;font-size:15px;opacity:0;transition:opacity .4s;}
 #toast.on{opacity:1;}
+#mission{left:16px;top:calc(14px + env(safe-area-inset-top,0px));max-width:330px;background:var(--glass);border:1px solid var(--line);border-left:4px solid #3fc46b;border-radius:8px;padding:9px 12px;}
+#mission .h{font-size:11px;letter-spacing:.22em;color:#3fc46b;font-weight:700;}
+#mission .t{font-size:18px;font-weight:900;margin:2px 0;}
+#mission .o{font-size:14px;line-height:1.45;}
+#mission .m{font-family:var(--f-num);font-size:26px;line-height:1;margin-top:4px;color:var(--amber);font-variant-numeric:tabular-nums;}
+#mission .m.low{color:#ff5a4e;}
+#mlist{position:fixed;inset:0;z-index:15;display:grid;place-items:center;background:rgba(8,10,12,.55);}
+#mlist .card{width:min(560px,92vw);max-height:86vh;overflow-y:auto;background:#141a1f;border:1px solid var(--line);border-radius:12px;padding:16px 18px;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+#mlist h2{margin:0 0 2px;font-size:20px;} #mlist .sub{font-size:12px;color:var(--muted);margin-bottom:10px;}
+#mlist .it{border-top:1px solid var(--line);padding:10px 0;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;}
+#mlist .it b{font-size:16px;} #mlist .it .d{grid-column:1;font-size:13px;color:#c9c4b8;line-height:1.5;} #mlist .it .s{font-size:12px;color:#3fc46b;}
+#mlist button{font:inherit;font-weight:700;font-size:13px;padding:7px 12px;border-radius:6px;border:0;background:var(--amber);color:#1a1206;cursor:pointer;}
+#mlist button.x{background:#3a4148;color:#f6f1e7;} #mlist button:disabled{opacity:.35;cursor:default;}
 
 .help{position:fixed;left:16px;top:calc(14px + env(safe-area-inset-top,0px));z-index:6;background:var(--glass);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
   font-size:13px;line-height:1.9;max-width:300px;}
@@ -102,6 +115,7 @@ body.touch #mini{width:118px;height:118px;left:calc(12px + env(safe-area-inset-l
 body.touch #clock .t{font-size:30px;} body.touch #zone{top:calc(56px + env(safe-area-inset-top,0px));bottom:auto;right:16px;} body.touch #zone .n{font-size:22px;}
 body.touch #speedo{left:50%;right:auto;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));text-align:center;} body.touch #speedo .v{font-size:48px;}
 body.touch #prompt,body.touch #tip{display:none!important;} body.touch #sound{top:calc(50px + env(safe-area-inset-top,0px));bottom:auto;right:auto;left:calc(150px + env(safe-area-inset-left,0px));z-index:8;}
+body.touch #mission{left:calc(150px + env(safe-area-inset-left,0px));top:calc(56px + env(safe-area-inset-top,0px));max-width:44vw;padding:6px 9px;} body.touch #mission .t{font-size:15px;} body.touch #mission .o{font-size:12px;} body.touch #mission .m{font-size:20px;}
 body.touch #toast{top:calc(60px + env(safe-area-inset-top,0px));font-size:14px;max-width:80vw;white-space:normal;text-align:center;}
 #bubbles{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden;}
 .bubble{position:absolute;left:0;top:0;max-width:220px;background:#fffdf6;color:#1b1b1b;font-size:13px;font-weight:700;line-height:1.4;padding:6px 10px;border-radius:10px;
@@ -138,6 +152,8 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
 <div id="prompt" class="hud" hidden></div>
 <div id="tip" class="hud stroke">TAB 操作說明 · M 大地圖 · N 日夜切換</div>
 <div id="toast" class="hud stroke"></div>
+<div id="mission" class="hud" hidden><div class="h">任務進行中</div><div class="t" id="mT"></div><div class="o" id="mO"></div><div class="m" id="mC"></div></div>
+<div id="mlist" hidden><div class="card"><h2>校園任務</h2><div class="sub" id="mlSub"></div><div id="mlItems"></div><div style="text-align:right;margin-top:10px"><button type="button" class="x" id="mlClose">關閉（J）</button></div></div></div>
 <button id="sound" type="button" hidden>聲音：開</button>
 
 <div class="help" id="help" hidden>
@@ -148,7 +164,7 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
   <div class="row"><kbd>W</kbd>油門／踩踏板　<kbd>S</kbd>煞車／倒車　<kbd>A D</kbd>轉向</div>
   <div class="row"><kbd>SPACE</kbd>手煞車　<kbd>H</kbd>喇叭／鈴鐺　<kbd>L</kbd>大燈</div>
   <h3>其他</h3>
-  <div class="row"><kbd>M</kbd>大地圖（點擊傳送）　<kbd>N</kbd>日／夜</div>
+  <div class="row"><kbd>J</kbd>任務清單　<kbd>M</kbd>大地圖（點擊傳送）　<kbd>N</kbd>日／夜</div>
   <div class="row"><kbd>R</kbd>回到行政大樓　<kbd>滾輪</kbd>鏡頭遠近</div>
 </div>
 
@@ -163,6 +179,7 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
     <button type="button" class="tb" data-k="KeyH" id="bHorn" hidden>喇叭</button>
   </div>
   <div id="ttop">
+    <button type="button" class="tb sm" data-k="KeyJ">任務</button>
     <button type="button" class="tb sm" data-k="KeyM">地圖</button>
     <button type="button" class="tb sm" data-k="KeyN">日夜</button>
     <button type="button" class="tb sm" id="bFull">全螢幕</button>
@@ -182,6 +199,7 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
       <span><b>SHIFT</b>奔跑</span>
       <span><b>SPACE</b>跳 ／ 手煞車</span>
       <span><b>M</b>大地圖・傳送</span>
+      <span><b>J</b>校園任務（地圖上的黃色 ! ）</span>
     </div>
     <div class="tkeys">
       <span><b>左半邊</b>拖曳移動（推到底會跑）</span>
@@ -537,20 +555,20 @@ const LOOK = {
   '電機資訊學院': { c: 'B', en: 'College of EECS', wall: '#D98C72', accent: '#7A3B2E', kind: 'unit', frame: '#EFE5DA', plinth: '#7A3B2E', pilaster: '#A9533F', hood: '#9EA3A6', portal: 'yellow' },
   '管理學院': { c: 'C', en: 'College of Management', wall: '#B5583C', accent: '#8E918F', kind: 'unit', frame: '#8E918F', brick: true, topBand: '#8C8A85' },
   '外語學院': { c: 'D', en: 'College of Foreign Languages', wall: '#E2A06C', accent: '#EDE6DA', kind: 'unit', frame: '#EDE6DA', portal: 'portico' },
-  '外語學院 圓形附屬量體': { en: 'Round Hall', wall: '#E2A06C', accent: '#EDE6DA', kind: 'unit', frame: '#EDE6DA', floors: 2, h: 9, noSign: true },
+  '外語學院 圓形附屬量體': { en: 'Round Hall', wall: '#C2242E', accent: '#C2242E', kind: 'ring', frame: '#F1EEE8', floors: 2, h: 9, noSign: true },
   '財金學院': { c: 'E', en: 'College of Finance', wall: '#B3B6B8', accent: '#C7754A', kind: 'visor', frame: '#D6D8D8' },
   '工學院': { c: 'F', en: 'College of Engineering', wall: '#E7A588', accent: '#F0E4D8', kind: 'unit', frame: '#F0E4D8', sill: true },
-  '圖書資訊大樓': { c: 'J', en: 'Library & Information Building', wall: '#D9937A', accent: '#4E8C8A', kind: 'band' },
+  '圖書資訊大樓': { c: 'J', en: 'Library & Information Building', wall: '#D9937A', accent: '#4E8C8A', kind: 'band', terrace: { t0: -8, t1: 8, depth: 7.5, spiral: 1 } },
   '學生活動中心': { c: 'K', en: 'Student Activity Center', wall: '#B8603F', accent: '#D9D2C4', kind: 'unit', frame: '#D9D2C4', sill: true },
   '教師研究大樓(OSM名:教學研究大樓)': { c: 'R', name: '教學研究大樓', en: 'Teaching & Research Building', wall: '#B85C3E', accent: '#6E2A2A', kind: 'grille', frame: '#3A3533', plinth: '#6E2A2A' },
   '創業園區・招待所': { en: 'Incubator & Guest House', wall: '#C9B8A6', accent: '#9A8F84', kind: 'unit', frame: '#E8E2DA', floors: 3, h: 11 },
-  '跨領域實作工廠': { en: 'Interdisciplinary Workshop', wall: '#A9B6BD', accent: '#7F8C93', kind: 'factory', floors: 2, h: 10 },
+  '跨領域實作工廠': { en: 'Interdisciplinary Workshop', wall: '#E2D2B6', accent: '#B5AC9E', kind: 'unit', frame: '#F2EEE6', sill: true, floors: 2, h: 10 },
   '智慧製造實作工廠': { en: 'Smart Manufacturing Workshop', wall: '#A9B6BD', accent: '#7F8C93', kind: 'factory', floors: 2, h: 10 },
   '實作工場(長條)': { name: '實作工廠', en: 'Workshop', wall: '#B4BCC0', accent: '#7F8C93', kind: 'factory', floors: 2, h: 9 },
-  '職務宿舍': { en: 'Staff Housing', wall: '#D8CBB8', accent: '#8C8378', kind: 'unit', frame: '#F2EEE8', floors: 2, h: 7, noSign: true },
+  '職務宿舍': { en: 'Staff Housing', wall: '#E9E5DC', accent: '#B9B3A8', kind: 'flat', frame: '#FBFAF6', floors: 4, h: 12.5, noSign: true },
   '敬業樓': { en: 'Jing-Ye Hall · Dormitory', wall: '#9C7A62', accent: '#A8A8A2', kind: 'dorm' },
   '樂群樓(學生宿舍)': { name: '樂群樓（學生宿舍）', en: 'Le-Qun Hall · Dormitory', wall: '#C0603F', accent: '#BDBDB8', kind: 'balcony' },
-  '游泳館': { en: 'Natatorium', wall: '#B5583C', accent: '#2FA58A', kind: 'pool' },
+  '游泳館': { en: 'Natatorium', wall: '#A9AAA5', accent: '#B5583C', kind: 'pool' },
   '產業實驗園區(OSM名:產業創新園區)': { name: '產業實驗園區', en: 'Industry Park', wall: '#BFC2C2', accent: '#8F9393', kind: 'unit', frame: '#E5E7E6', floors: 2, h: 8 },
 };
 const lookFor = n => LOOK[n] || LOOK[Object.keys(LOOK).find(k => n.startsWith(k))] || { wall: '#C9C1B5', accent: '#8F8A83', kind: 'unit', frame: '#EEE' };
@@ -677,10 +695,18 @@ function facadeFor(key, L) {
         glass(x + 14, y + 6, 44, 34); curtain(x + 14, y + 6, 44, 34); lit(x + 14, y + 6, 44, 34, .55);
         if (rnd() < .45) for (let k = 0; k < 3; k++) { g.fillStyle = `hsl(${rr(0, 360)},${rr(30, 70)}%,${rr(45, 80)}%)`; g.fillRect(x + 16 + k * 13, y + 22, 9, rr(10, 16)); }
         g.fillStyle = L.accent; g.fillRect(x, y + 40, B, 20); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(x, y + 60, B, 4); break;
-      case 'pool': // 游泳館: red-brick wall, tall glass, teal steel columns
-        glass(x + 4, y + 6, B - 8, B - 12, '#3b5865'); lit(x + 4, y + 6, B - 8, B - 12, .5);
-        g.fillStyle = L.accent; g.fillRect(x, y, 6, B); if (fy % 2) g.fillRect(x, y + B - 5, B, 5);
-        break;
+      case 'pool': // 游泳館 (Street View 2017): grey concrete hall, a long ribbon window high up, glazed ground floor
+        if (fy === 7) { glass(x, y + 6, B, B - 10, '#3b5865'); lit(x, y + 6, B, B - 10, .5); g.fillStyle = L.accent; g.fillRect(x, y, 5, B); }
+        else if (fy === 5) { glass(x, y + 22, B, 20, '#3b5865'); lit(x, y + 22, B, 20, .4); }
+        g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x, y, 1, B); break;
+      case 'ring': // 外語學院 round hall (Street View 2018): red ring beams at every floor, glass between, slim white mullions
+        glass(x, y + 12, B, B - 12, '#3d5662'); lit(x + 2, y + 14, B - 4, B - 16, .3);
+        g.fillStyle = L.frame; g.fillRect(x + B / 2 - 1, y + 12, 3, B - 12); g.fillRect(x, y + 12, 2, B - 12);
+        g.fillStyle = L.accent; g.fillRect(x, y, B, 12); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x, y + 11, B, 2); break;
+      case 'flat': // 職務宿舍 (Street View 2018): white walk-up apartments, recessed balconies with railings
+        glass(x + 10, y + 10, 30, 30); curtain(x + 10, y + 10, 30, 30); lit(x + 10, y + 10, 30, 30, .55);
+        g.fillStyle = L.frame; g.fillRect(x + 4, y + 40, B - 8, 4); for (let k = 0; k < 9; k++) g.fillRect(x + 6 + k * 6.5, y + 44, 2, 12); g.fillRect(x + 4, y + 54, B - 8, 3);
+        g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x, y + B - 6, B, 6); ac(x + 44, y + 16); break;
       case 'factory':
         if (fy === 6) { glass(x + 4, y + 10, B - 8, 14); lit(x + 4, y + 10, B - 8, 14, .3); }
         if (fy === 7 && fx % 4 === 1) { g.fillStyle = '#7e8a90'; g.fillRect(x + 4, y - B + 20, B - 8, B * 2 - 20); for (let k = 0; k < 20; k++) { g.fillStyle = 'rgba(0,0,0,.15)'; g.fillRect(x + 4, y - B + 22 + k * 5, B - 8, 1); } }
@@ -709,9 +735,7 @@ function wallRing(pts, y0, y1, mat, floorH, uOff = 0, out = 0, gap = null, inwar
     const gs = gapsOn(gap, i, a, b, L).filter(g => y0 < g.top);
     if (gs.length) {
       const dx = (b[0] - a[0]) / L, dz = (b[1] - a[1]) / L, at = k => [a[0] + dx * k, a[1] + dz * k], uu = k => u0 + (u1 - u0) * k / L;
-      let cur = 0;
-      for (const g of gs) { quad(at(cur), at(g.t0), y0, y1, uu(cur), uu(g.t0)); if (y1 > g.top) quad(at(g.t0), at(g.t1), Math.max(y0, g.top), y1, uu(g.t0), uu(g.t1)); cur = g.t1; }
-      quad(at(cur), b, y0, y1, uu(cur), u1);
+      for (const [ta, tb, open] of gapSpans(gs, L)) for (const [ya, yb] of solidY(open.map(g => [g.bot || -1e9, g.top]), y0, y1)) quad(at(ta), at(tb), ya, yb, uu(ta), uu(tb));
     } else quad(a, b, y0, y1, u0, u1);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
@@ -723,17 +747,20 @@ function ringWalls(pts, yMin, yMax, gap) {
     const a = pts[i], b = pts[(i + 1) % pts.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .05) continue;
     const gs = gapsOn(gap, i, a, b, L);
     if (gs.length) {
-      const dx = (b[0] - a[0]) / L, dz = (b[1] - a[1]) / L, at = k => [a[0] + dx * k, a[1] + dz * k]; let cur = 0;
-      for (const g of gs) { const A = at(cur), B = at(g.t0), C = at(g.t1); if (g.t0 - cur > .02) addWall(A[0], A[1], B[0], B[1], yMin, yMax); addWall(B[0], B[1], C[0], C[1], g.lintel, yMax); cur = g.t1; }
-      const A = at(cur); addWall(A[0], A[1], b[0], b[1], yMin, yMax);
+      const dx = (b[0] - a[0]) / L, dz = (b[1] - a[1]) / L, at = k => [a[0] + dx * k, a[1] + dz * k];
+      for (const [ta, tb, open] of gapSpans(gs, L)) { if (tb - ta < .02) continue; const A = at(ta), B = at(tb); for (const [ya, yb] of solidY(open.map(g => [g.bot ? g.bot - .5 : -1e9, g.lintel]), yMin, yMax)) addWall(A[0], A[1], B[0], B[1], ya, yb); }
     } else addWall(a[0], a[1], b[0], b[1], yMin, yMax);
   }
 }
+/* split an edge at every gap end: [t0, t1, gaps covering that stretch] */
+function gapSpans(gs, L) { const ts = [...new Set([0, L, ...gs.flatMap(g => [g.t0, g.t1])])].sort((p, q) => p - q), out = []; for (let k = 1; k < ts.length; k++) { const m = (ts[k - 1] + ts[k]) / 2; out.push([ts[k - 1], ts[k], gs.filter(g => g.t0 <= m && g.t1 >= m)]); } return out; }
+/* the solid parts of [y0, y1] once the open intervals are cut out */
+function solidY(open, y0, y1) { const out = []; let cur = y0; for (const [a, b] of open.sort((p, q) => p[0] - q[0])) { if (a > cur) out.push([cur, Math.min(a, y1)]); cur = Math.max(cur, b); if (cur >= y1) break; } if (cur < y1) out.push([cur, y1]); return out.filter(([a, b]) => b - a > .01); }
 /* door gaps lying on edge i (gap may be one gap or a list), as sorted [t0, t1] spans along the edge */
 function gapsOn(gap, i, a, b, L) {
   const list = Array.isArray(gap) ? gap : gap ? [gap] : [], dx = (b[0] - a[0]) / L, dz = (b[1] - a[1]) / L, out = [];
   for (const g of list) { if (g.i !== i || L <= g.w + .4) continue; const t = clamp((g.x - a[0]) * dx + (g.z - a[1]) * dz, g.w / 2 + .2, L - g.w / 2 - .2); out.push({ ...g, t0: t - g.w / 2, t1: t + g.w / 2 }); }
-  out.sort((p, q) => p.t0 - q.t0); for (let k = 1; k < out.length; k++) if (out[k].t0 < out[k - 1].t1 + .3) out.splice(k--, 1);
+  out.sort((p, q) => p.t0 - q.t0); for (let k = 1; k < out.length; k++) if (out[k].t0 < out[k - 1].t1 + .3 && (out[k].bot || 0) === (out[k - 1].bot || 0)) out.splice(k--, 1);
   return out;
 }
 function insetPoly(pts, d) {
@@ -809,17 +836,18 @@ function buildBuilding(b) {
   const info = { name, code: L.c, pts, h, entrance: E, doors, look: L, plan: PD };
   BUILT.push(info);
   buildShell(info, b, L, mat, floors, fh, corePts, uOff);
+  if (L.terrace) buildTerrace(info, L.terrace);
   if (E && !L.noSign) {
     const setback = L.arcade ? 3 : 0;
     const g = new THREE.Group(); g.position.set(E.x - E.nx * setback, 0, E.z - E.nz * setback); g.rotation.y = Math.atan2(E.nx, E.nz); scene.add(g);
     const small = h < 9;
     for (const sx of [-1, 1]) box(DOOR.w / 2 - .1, DOOR.h - .1, .05, matGlassDark, sx * (DOOR.w / 2 + DOOR.w / 4 + .05), DOOR.h / 2, .02, g, false); // glass side lights beside the doorway
-    if (!L.arcade && !small && !L.portal && !onCarRoad(E.x + E.nx * 3.9, E.z + E.nz * 3.9, .5)) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
+    if (!L.arcade && !small && !L.portal && !L.terrace && !onCarRoad(E.x + E.nx * 3.9, E.z + E.nz * 3.9, .5)) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
     if (!small) box(L.arcade ? 18 : 10, .03, L.arcade ? 3 : 2.4, matConcrete, 0, .015, (L.arcade ? 1.5 : 1.2), g, false); // flush landing (no step blocks to clip through)
     const signW = Math.min(small ? 6 : 14, E.len * .5);
     const st = textTex([name, L.en + (L.c ? ` · ${L.c}` : '')], { w: 1024, h: 200, bg: '#22313b', fg: '#f6f1e7', sizes: [name.length > 9 ? 64 : 86, 34] });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(signW, signW * 200 / 1024), new THREE.MeshStandardMaterial({ map: st, roughness: .6 }));
-    sign.position.set(0, L.arcade ? 10.4 : small ? 3.2 : 5.4, L.arcade ? setback + .1 : .12); g.add(sign);
+    sign.position.set(0, L.arcade ? 10.4 : small ? 3.2 : L.terrace ? info.levels[1] + DOOR.h + 1.3 : 5.4, L.arcade ? setback + .1 : .12); g.add(sign);
     if (L.c) {
       const lt = canvasTex(256, 256, (cg) => { cg.font = `600 250px Teko, ${FONT}`; cg.textAlign = 'center'; cg.textBaseline = 'middle'; cg.lineWidth = 10; cg.strokeStyle = 'rgba(30,30,30,.7)'; cg.strokeText(L.c, 128, 150); cg.fillStyle = '#f7f3ea'; cg.fillText(L.c, 128, 150); });
       const lm = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), new THREE.MeshStandardMaterial({ map: lt, transparent: true, alphaTest: .1 }));
@@ -828,13 +856,64 @@ function buildBuilding(b) {
     if (L.arcade) for (const sx of [-10, 10]) for (const k of [0, 1]) { const col = [0xd8432f, 0xf2b134, 0x2f6fb5, 0x3a9a5b][(sx > 0) * 2 + k]; box(.6, 5, .05, M(col), sx + k * 1.2, 2.5, setback + 1.5, g, false); }
   }
   const campus = inPoly(...centroid(pts), EAST_POLY) ? '第一校區・東校區' : '第一校區・西校區';
-  zone(name, campus, bboxOf(pts, 8), L.c ? `${L.c} ${name}` : name, 2);
+  zone(name, campus, bboxOf(pts, 8), L.c ? `${L.c} ${name}` : name, 2); zones[zones.length - 1].pts = pts;
   mapFills.push({ pts, c: '#e4ddcf', stroke: true, code: L.c });
 }
 
 
 
 /* ================= per-building details confirmed on Street View ================= */
+/* 圖書資訊大樓 (Street View 2016–2018): the library door is on 2F. Outside it a terrace on salmon round columns
+   shelters the ground-floor 國際會議廳 entrance; a spiral stair at the end of the terrace climbs from the plaza. */
+function buildTerrace(info, T) {
+  const E = info.entrance, H = info.levels[1], tx = -E.nz, tz = E.nx, nx = E.nx, nz = E.nz;
+  const P = (t, v) => [E.x + tx * t + nx * v, E.z + tz * t + nz * v], D = T.depth;
+  const slabM = M(0xd8d2c6, { map: concreteTex }), colM = M(0xd9937a, { roughness: .7 }), railM = M(0x9aa3a8, { metalness: .6, roughness: .35 }), glassM = M(0x9fc4cf, { transparent: true, opacity: .35, metalness: .2, roughness: .1 });
+  const poly = [P(T.t0, .1), P(T.t1, .1), P(T.t1, D), P(T.t0, D)];
+  DECKS.push({ poly, y: H, box: bboxOf(poly) });
+  const at = (t, v, y, w, h, d, mat) => { const m = box(w, h, d, mat, 0, y, 0, scene); const [x, z] = P(t, v); m.position.set(x, y, z); m.rotation.y = Math.atan2(nx, nz); return m; };
+  const slab = at((T.t0 + T.t1) / 2, D / 2, H - .22, T.t1 - T.t0, .44, D, slabM); blockers.push(slab);
+  at((T.t0 + T.t1) / 2, D / 2, H + .005, T.t1 - T.t0 - .1, .02, D - .1, matGrayPaver);
+  // round columns under the outer edge (the open rotunda the conference-hall door sits in)
+  for (let t = T.t0 + .6; t <= T.t1 - .5; t += (T.t1 - T.t0 - 1.1) / 4) { const [x, z] = P(t, D - .6); cyl(.38, .38, H - .44, colM, x, (H - .44) / 2, z, scene, 16); addCircle(x, z, .42, -99, H - 1); }
+  // glass balustrade with a steel top rail; open where the spiral stair lands
+  const sp = T.spiral ? { t: T.t1 + 2.6, v: D / 2 - .4, r1: 2.5, r0: .35 } : null;
+  const rail = (a, b) => { const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < .2) return; const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, ang = Math.atan2(b[0] - a[0], b[1] - a[1]);
+    const gl = box(.03, 1.0, L, glassM, mx, H + .55, mz, scene, false); gl.rotation.y = ang; const tr = box(.07, .06, L, railM, mx, H + 1.08, mz, scene, false); tr.rotation.y = ang; addWall(a[0], a[1], b[0], b[1], H - .4, H + 2.2, false, .15); };
+  rail(P(T.t0, .1), P(T.t0, D)); rail(P(T.t0, D), P(T.t1, D));
+  if (sp) { rail(P(T.t1, .1), P(T.t1, sp.v - 2.1)); rail(P(T.t1, sp.v + 2.3), P(T.t1, D)); } else rail(P(T.t1, .1), P(T.t1, D));
+  // the library's own door on 2F: glass doors in a dark frame, a canopy above
+  const fr = M(0x3a3f44, { metalness: .5, roughness: .4 });
+  for (const sx of [-1.66, 1.66]) at(sx, -.05, H + (DOOR.h + .3) / 2, .14, DOOR.h + .3, .4, fr);
+  at(0, -.05, H + DOOR.h + .25, 3.4, .14, .4, fr); at(0, 1.2, H + DOOR.h + .9, 7, .25, 2.6, matConcrete);
+  for (const sx of [-.8, .8]) at(sx, -.12, H + DOOR.h / 2, 1.5, DOOR.h, .04, glassM);
+  if (!sp) return;
+  // spiral stair: 300° of travel, 26 risers, entered from the plaza on the outer side, landing level with the terrace
+  const [cx, cz] = P(sp.t, sp.v), n = 26, sweep = 300, a0 = 120;
+  DECKS.push({ cx, cz, r0: sp.r0, r1: sp.r1, T: [tx, tz], V: [nx, nz], a0, sweep, n, H, box: { minX: cx - sp.r1, maxX: cx + sp.r1, minZ: cz - sp.r1, maxZ: cz + sp.r1 } });
+  const dirAt = deg => { const a = deg * Math.PI / 180; return [tx * Math.cos(a) + nx * Math.sin(a), tz * Math.cos(a) + nz * Math.sin(a)]; };
+  const stepM = M(0xe9e4da, { map: concreteTex }), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  const steps = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), stepM, n); steps.castShadow = steps.receiveShadow = true;
+  for (let k = 0; k < n; k++) { const mid = a0 - (k + .5) * sweep / n, [dx, dz] = dirAt(mid), rm = (sp.r0 + sp.r1) / 2, y = (k + 1) * H / n; e.set(0, Math.atan2(dx, dz), 0); q.setFromEuler(e);
+    m4.compose(new THREE.Vector3(cx + dx * rm, y - .08, cz + dz * rm), q, new THREE.Vector3(rm * (sweep / n) * Math.PI / 180 * 1.25, .16, sp.r1 - sp.r0)); steps.setMatrixAt(k, m4); }
+  scene.add(steps);
+  { const pts = [new THREE.Vector2(cx, -cz)]; for (let a = a0; a <= a0 + 360 - sweep + .01; a += 6) { const [dx, dz] = dirAt(a); pts.push(new THREE.Vector2(cx + dx * sp.r1, -(cz + dz * sp.r1))); }
+    const lm = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: .2, bevelEnabled: false }).rotateX(-Math.PI / 2), stepM); lm.position.y = H - .2; lm.castShadow = lm.receiveShadow = true; scene.add(lm); }
+  cyl(sp.r0, sp.r0, H + 1.2, colM, cx, (H + 1.2) / 2, cz, scene, 14); addCircle(cx, cz, sp.r0 + .05, -99, H + 3);
+  // outer handrail following the helix, balusters, and the open entry at the bottom
+  let prev = null;
+  for (let a = a0; a >= a0 - sweep - (360 - sweep); a -= 10) {
+    const [dx, dz] = dirAt(a), x = cx + dx * sp.r1, z = cz + dz * sp.r1, f = (a0 - a) / sweep, y = Math.min(H, f * H) + 1.0;
+    if (a0 - a > 18 && a0 - a < sweep - 10) { cyl(.025, .025, 1.0, railM, x, y - .5, z, scene, 5); }
+    if (prev && a0 - a > 18 && a0 - a < sweep) { const L = Math.hypot(x - prev[0], z - prev[2], y - prev[1]); const r = cyl(.03, .03, L, railM, (x + prev[0]) / 2, (y + prev[1]) / 2, (z + prev[2]) / 2, scene, 5); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(x - prev[0], y - prev[1], z - prev[2]).normalize()); }
+    const nxt = dirAt(a - 10), x2 = cx + nxt[0] * sp.r1, z2 = cz + nxt[1] * sp.r1;
+    if (a0 - a > 12 && a0 - a < sweep - 14) addWall(x, z, x2, z2, -1, H + 2.2, false, .12); // closed except the entry and the side facing the terrace
+    prev = [x, y, z];
+  }
+  { const [dx, dz] = dirAt(a0 + 6); addWall(cx + dx * sp.r0, cz + dz * sp.r0, cx + dx * sp.r1, cz + dz * sp.r1, -1, H - 1.6, false, .1); } // can't walk in under the landing
+  pavedPolys.push(Array.from({ length: 12 }, (_, i) => [cx + Math.cos(i / 12 * 6.283) * (sp.r1 + 1), cz + Math.sin(i / 12 * 6.283) * (sp.r1 + 1)]));
+  zone('圖書館旋轉樓梯', '圖書資訊大樓 二樓入口', { minX: cx - 4, maxX: cx + 4, minZ: cz - 4, maxZ: cz + 4 }, '旋轉樓梯', 3);
+}
 function buildSpecials() {
   const by = n => BUILT.find(b => b.name.startsWith(n));
   const frameAt = (E, out = 0) => { const g = new THREE.Group(); g.position.set(E.x + E.nx * out, 0, E.z + E.nz * out); g.rotation.y = Math.atan2(E.nx, E.nz); scene.add(g); return g; };
@@ -1567,8 +1646,22 @@ function buildCore(c, levels, h, SB, put, group) {
 
 function interiorAt(x, z) { for (const I of INTERIORS) if (inBox(x, z, I.box) && inPoly(x, z, I.poly)) return I; return null; }
 /* the walkable surface under (x, z) for something whose feet are at height y */
+/* raised outdoor floors the player can walk on and under: terraces (flat polygons) and spiral stairs */
+const DECKS = [];
+function deckY(x, z, y, g) {
+  const lim = y + .6; let best = g;
+  for (const D of DECKS) {
+    if (!inBox(x, z, D.box)) continue;
+    if (D.poly) { if (D.y <= lim && D.y > best && inPoly(x, z, D.poly)) best = D.y; continue; }
+    const dx = x - D.cx, dz = z - D.cz, r = Math.hypot(dx, dz); if (r < D.r0 || r > D.r1) continue;
+    const phi = Math.atan2(dx * D.V[0] + dz * D.V[1], dx * D.T[0] + dz * D.T[1]) * 180 / Math.PI; // angle in the terrace frame
+    let h; if (phi > D.a0) h = D.H; else { const f = (D.a0 - phi) / D.sweep; h = Math.min(D.H, (Math.floor(f * D.n) + 1) * D.H / D.n); }
+    if (h <= lim && h > best) best = h;
+  }
+  return best;
+}
 function surfaceY(x, z, y) {
-  const g = groundY(x, z), I = interiorAt(x, z); if (!I) return g;
+  const g = DECKS.length ? deckY(x, z, y, groundY(x, z)) : groundY(x, z), I = interiorAt(x, z); if (!I) return g;
   const lim = y + .6, lv = I.levels; let best = g;
   for (const c of I.cores) {
     const dx = x - c.ox, dz = z - c.oz, a = dx * c.A[0] + dz * c.A[1], b = dx * c.B[0] + dz * c.B[1];
@@ -1606,6 +1699,8 @@ function buildShell(info, b, L, mat, floors, fh, corePts, uOff) {
   const gx = E.x - E.nx * setback, gz = E.z - E.nz * setback;
   const doors = (info.doors || [E]).map(d => ({ ...d, gx: d.x - d.nx * setback, gz: d.z - d.nz * setback }));
   const gap = doors.map(d => ({ i: d.i, x: d.gx, z: d.gz, w: DOOR.w, top: DOOR.h, lintel: DOOR.h - 1.0 }));
+  info.levels = levels;
+  if (L.terrace) gap.push({ i: E.i, x: E.x, z: E.z, w: 3.2, bot: levels[1], top: levels[1] + DOOR.h + .3, lintel: levels[1] + DOOR.h - .8 }); // main door one floor up, onto the terrace
   const inner = insetPoly(pts, .25), innerCore = arcade ? insetPoly(corePts, .25) : inner;
   // outer skin and inner skin (facade texture inside too, so the windows read from the rooms)
   if (arcade) {
@@ -2155,10 +2250,10 @@ function buildFurniture() {
     for (const k of [-1, 1]) { const bx = cx - tz * k * .9, bz = cz + tx * k * .9; const u = new THREE.Mesh(new THREE.TorusGeometry(.45, .05, 6, 14, Math.PI), bolMat[(k + 1) / 2]); u.position.set(bx, groundY(bx, bz), bz); u.rotation.y = Math.atan2(tx, tz) + Math.PI / 2; scene.add(u); for (const o of [-.45, 0, .45]) addCircle(bx - tz * o, bz + tx * o, .1); }
   }
   // YouBike docks: 財金學院, 西校區大門, 游泳館
-  const yb = (x, z, rot) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g); box(.6, 1.6, .5, M(0xf2b134), -5, .8, 0, g); for (let i = 0; i < 8; i++) { box(.12, .9, .2, M(0x5b5f63), -3.6 + i * 1, .45, 0, g); if (rnd() < .6) { const lx = -3.6 + i * 1, lz = 1.15; BIKE_SPOTS.push([x + lx * Math.cos(rot) + lz * Math.sin(rot), z - lx * Math.sin(rot) + lz * Math.cos(rot), rot + Math.PI, 'youbike']); } } addColPoly([[x - 6, z - .4], [x + 6, z - .4], [x + 6, z + .35], [x - 6, z + .35]].map(([px, pz]) => { const dx = px - x, dz = pz - z; return [x + dx * Math.cos(rot) + dz * Math.sin(rot), z - dx * Math.sin(rot) + dz * Math.cos(rot)]; })); };
+  const yb = (x, z, rot, name) => { YB_DOCKS.push({ x, z, rot, name }); const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g); box(.6, 1.6, .5, M(0xf2b134), -5, .8, 0, g); for (let i = 0; i < 8; i++) { box(.12, .9, .2, M(0x5b5f63), -3.6 + i * 1, .45, 0, g); if (rnd() < .6) { const lx = -3.6 + i * 1, lz = 1.15; BIKE_SPOTS.push([x + lx * Math.cos(rot) + lz * Math.sin(rot), z - lx * Math.sin(rot) + lz * Math.cos(rot), rot + Math.PI, 'youbike']); } } addColPoly([[x - 6, z - .4], [x + 6, z - .4], [x + 6, z + .35], [x - 6, z + .35]].map(([px, pz]) => { const dx = px - x, dz = pz - z; return [x + dx * Math.cos(rot) + dz * Math.sin(rot), z - dx * Math.sin(rot) + dz * Math.cos(rot)]; })); };
   const byName = n => BUILT.find(b => b.name.startsWith(n));
-  for (const n of ['財金學院', '游泳館']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance; const x = E.x + E.nx * 9 + E.nz * 12, z = E.z + E.nz * 9 - E.nx * 12; if (!occupied(x, z, 2)) yb(x, z, Math.atan2(E.nx, E.nz) + Math.PI / 2); }
-  { const W = SURVEY.anchors['卓越路大門（西校區，南端）']; yb(W[0] + 16, W[1] - 14, 0); }
+  for (const n of ['財金學院', '游泳館']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance; const x = E.x + E.nx * 9 + E.nz * 12, z = E.z + E.nz * 9 - E.nx * 12; if (!occupied(x, z, 2)) yb(x, z, Math.atan2(E.nx, E.nz) + Math.PI / 2, n); }
+  { const W = SURVEY.anchors['卓越路大門（西校區，南端）']; yb(W[0] + 16, W[1] - 14, 0, '卓越路大門'); }
   // students' own bikes parked by the dorm doors
   for (const n of ['敬業樓 A', '敬業樓 B', '樂群樓']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance;
     for (const side of [1, -1]) { const x0 = E.x + E.nx * 4 + E.nz * side * 4.5, z0 = E.z + E.nz * 4 - E.nx * side * 4.5; if (occupied(x0, z0, .5)) continue; for (let k = 0; k < 3; k++) { const x = x0 + E.nz * side * k * .8, z = z0 - E.nx * side * k * .8; if (!occupied(x, z, .3)) BIKE_SPOTS.push([x, z, Math.atan2(E.nx, E.nz) + rr(-.1, .1)]); } break; } }
@@ -2414,7 +2509,8 @@ function makeTruck(color) {
 }
 
 const vehicles = [];
-const BIKE_SPOTS = []; // [x, z, heading, kind?] filled while building the racks and YouBike docks
+const BIKE_SPOTS = [];
+const YB_DOCKS = []; // {x, z, rot, name} // [x, z, heading, kind?] filled while building the racks and YouBike docks
 const CAR_COLORS = [0xf2f2f0, 0xf2f2f0, 0xd9dadc, 0xa8adb2, 0x2a2d31, 0x1b1d20, 0x8f1d1f, 0x1f3f78, 0x5a6e60, 0xc9b79a];
 const BIKE_COLORS = [0x1c1c1e, 0xf3f3f0, 0x2c5ea8, 0xb3231f, 0x5f7f5a, 0x9aa2a8, 0xd98fae, 0x3f8f8c];
 const SCOOTER_COLORS = [0xf3f3f0, 0x1c1c1e, 0xb3231f, 0x2c5ea8, 0x9aa2a8, 0x8fd0c4, 0xf0d26a, 0x7a8b5c];
@@ -2789,6 +2885,7 @@ function nearestTalk() {
   return best;
 }
 function actionInfo() {
+  const mg = nearGiver(); if (mg) return { label: '接任務：' + mg.title, go: () => startMission(mg) };
   if (player.vehicle) return { label: '下車', go: () => exitVehicle(false) };
   const v = nearestVehicle(), t = nearestTalk();
   const dv = v ? Math.hypot(v.pos.x - player.pos.x, v.pos.z - player.pos.z) - (v.type === 'car' ? 1.6 : .6) : 1e9;
@@ -2899,6 +2996,7 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 function onPress(code) {
   if (code === 'KeyF' || code === 'KeyE') doAction();
   if (code === 'KeyM' || (code === 'Escape' && mapOpen)) toggleMap();
+  if (code === 'KeyJ' || (code === 'Escape' && !$('mlist').hidden)) toggleMissionList();
   if (code === 'KeyN') { isNight = !isNight; applyTime(); gameMin = isNight ? 21 * 60 + 40 : 10 * 60 + 24; lastPhase = null; toast(isNight ? '夜晚 21:40' : '白天 10:24'); }
   if (code === 'KeyL') { lightsOn = !lightsOn; toast(lightsOn ? '大燈 開' : '大燈 關'); }
   if (code === 'KeyH') horn();
@@ -2982,6 +3080,128 @@ function horn() {
   if (player.vehicle.type === 'bike') { for (const t0 of [0, .16]) { const gb = actx.createGain(); gb.gain.setValueAtTime(.09, t + t0); gb.gain.exponentialRampToValueAtTime(.001, t + t0 + .5); gb.connect(actx.destination); for (const fq of [2093, 2637]) { const o = actx.createOscillator(); o.type = 'sine'; o.frequency.value = fq; o.connect(gb); o.start(t + t0); o.stop(t + t0 + .5); } } return; } // 叮叮
   for (const fq of player.vehicle.type === 'car' ? [392, 494] : [620, 740]) { const o = actx.createOscillator(); o.type = 'square'; o.frequency.value = fq; o.connect(g); o.start(t); o.stop(t + .45); }
 }
+
+/* ================= campus missions =================
+   Yellow "!" markers start a mission (F / action button, or pick one from the J list). A green beacon shows the
+   current target; timed missions fail when the clock runs out. Completed missions and best times are kept in
+   localStorage (per browser). */
+const MISSIONS = [];
+let MS = null; // { m, step, t, seen:Set }
+let missionSave = {}; try { missionSave = JSON.parse(localStorage.getItem('nkust-gta-missions') || '{}'); } catch (e) { }
+const saveMissions = () => { try { localStorage.setItem('nkust-gta-missions', JSON.stringify(missionSave)); } catch (e) { } };
+const subj = () => player.vehicle ? player.vehicle.pos : player.pos;
+const distTo = (x, z) => { const p = subj(); return Math.hypot(p.x - x, p.z - z); };
+function setupMissions() {
+  const bld = n => BUILT.find(b => b.name.startsWith(n)), I = n => INTERIORS.find(i => i.name.startsWith(n));
+  const front = (b, d) => b && b.entrance ? [b.entrance.x + b.entrance.nx * d, b.entrance.z + b.entrance.nz * d] : null;
+  const inside = (n, lv) => () => { const J = I(n), q = interiorAt(player.pos.x, player.pos.z); return !player.vehicle && J && q === J && player.pos.y >= J.levels[Math.min(lv, J.levels.length - 1)] - .3; };
+  const lot = id => LOTS.find(L => L.id === id), ybA = YB_DOCKS.find(d => d.name === '財金學院') || YB_DOCKS[0], ybW = YB_DOCKS.find(d => d.name === '卓越路大門') || YB_DOCKS[YB_DOCKS.length - 1];
+  const spiral = DECKS.find(D => !D.poly), PZ = SURVEY.anchors['橋東圓形廣場中心（落橋處）'];
+  const add = m => { if (m.giver && m.steps.every(st => st.at || st.any)) MISSIONS.push(m); };
+  add({ id: 'class', title: '第一節要點名', reward: 2, time: 150, giver: front(bld('行政大樓'), 8),
+    intro: '鐘快響了！到管理學院三樓上課，教授會點名。', steps: [
+      { text: '跑到管理學院，從樓梯爬上三樓', at: front(bld('管理學院'), 2), r: 3, check: inside('管理學院', 2) }] });
+  add({ id: 'youbike', title: 'YouBike 跨橋', reward: 3, time: 200, giver: ybA && [ybA.x + Math.sin(ybA.rot + Math.PI) * 3, ybA.z + Math.cos(ybA.rot + Math.PI) * 3],
+    intro: '借一台 YouBike，騎過大學橋，還到西校區卓越路大門的 YouBike 站。上橋會變慢，衝下坡前先煞車！', steps: [
+      { text: '在財金學院旁的 YouBike 站借一台車', at: ybA && [ybA.x, ybA.z], r: 6, check: () => player.vehicle && player.vehicle.kind === 'youbike' },
+      { text: '騎過大學橋，到卓越路大門 YouBike 站還車', at: ybW && [ybW.x, ybW.z], r: 6, check: () => player.vehicle && player.vehicle.kind === 'youbike' && distTo(ybW.x, ybW.z) < 6 }] });
+  add({ id: 'lunch', title: '學餐外送', reward: 3, time: 150, giver: front(bld('學生活動中心'), 6),
+    intro: '室友在敬業樓餓到不行，幫他從活動中心學餐帶便當回宿舍。走路、騎車、開車都可以。', steps: [
+      { text: '把便當送到敬業樓 A 門口', at: front(bld('敬業樓 A'), 3), r: 5 }] });
+  add({ id: 'book', title: '圖書館還書', reward: 2, time: 75, giver: [PZ[0] - 6, PZ[1] + 6],
+    intro: '書今天到期！圖書館大門在二樓，從東北角的旋轉樓梯上去，走進二樓大門還書。', steps: [
+      ...(spiral ? [{ text: '走到圖書資訊大樓的旋轉樓梯', at: [spiral.cx, spiral.cz], r: 3.5 }] : []),
+      { text: '爬上二樓平台，走進圖書館大門', at: front(bld('圖書資訊大樓'), 1), r: 2, check: inside('圖書資訊大樓', 1) }] });
+  add({ id: 'scooter', title: '機車移車', reward: 3, time: 220, giver: lot('M2') && [lot('M2').x, lot('M2').z],
+    intro: '學長的機車停在西校區，幫他騎到東校區的機車停車場停好（停進車棚區、車子停穩）。', steps: [
+      { text: '在西校區機車停車場騎一台機車', at: lot('M2') && [lot('M2').x, lot('M2').z], r: 25, check: () => player.vehicle && player.vehicle.type === 'scooter' },
+      { text: '騎到東校區機車停車場，在場內停穩', at: lot('M1') && [lot('M1').x, lot('M1').z], r: 40, check: () => { const v = player.vehicle, L = lot('M1'); return v && v.type === 'scooter' && Math.abs(v.speed) < .5 && inPoly(v.pos.x, v.pos.z, L.pts); } }] });
+  add({ id: 'tour', title: '校園巡禮', reward: 4, time: 0, giver: [RB.x + 18, RB.z + 6],
+    intro: '帶新生認識校園：到這五個地方打卡，順序隨你。', steps: [
+      { text: '打卡', any: [
+        { name: '大學橋', at: [0, 0], r: 12, check: () => subj().y > DECK - .5 },
+        { name: '橋東階梯劇場', at: [AMPHI.x + Math.sin((AMPHI.a0 + AMPHI.a1) / 2) * (AMPHI.r0 + 3), AMPHI.z + Math.cos((AMPHI.a0 + AMPHI.a1) / 2) * (AMPHI.r0 + 3)], r: 6 },
+        { name: '圖書館旋轉樓梯', at: spiral ? [spiral.cx, spiral.cz] : [150, -110], r: 5 },
+        { name: '鴴池', at: SURVEY.anchors['鴴池中心'], r: 45 },
+        { name: '運動場', at: SURVEY.anchors['運動場中心'], r: 40 }] }] });
+  // markers: a yellow ring with a floating "!" at each giver; one green beacon (and a pool for the tour)
+  const ring = new THREE.TorusGeometry(1.4, .09, 6, 32).rotateX(Math.PI / 2), bangT = textTex(['!'], { w: 128, h: 128, fg: '#1a1206', bg: '#ffd23f', sizes: [110] });
+  for (const m of MISSIONS) {
+    const g = new THREE.Group(), y = groundY(...m.giver); g.position.set(m.giver[0], y, m.giver[1]); scene.add(g);
+    g.add(new THREE.Mesh(ring, new THREE.MeshBasicMaterial({ color: 0xffd23f })));
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 3, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: .16, side: THREE.DoubleSide, depthWrite: false })); col.position.y = 1.5; g.add(col);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bangT, depthTest: false })); sp.scale.set(.9, .9, 1); sp.position.y = 3.2; sp.renderOrder = 5; g.add(sp);
+    m.marker = g; m.sprite = sp;
+  }
+  const beacon = () => { const g = new THREE.Group(); const c = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 70, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0x3fc46b, transparent: true, opacity: .22, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })); c.position.y = 35; g.add(c); g.add(new THREE.Mesh(ring, new THREE.MeshBasicMaterial({ color: 0x3fc46b }))); g.visible = false; scene.add(g); return g; };
+  MS_BEACONS.push(...Array.from({ length: 5 }, beacon));
+  updateMissionUI();
+}
+const MS_BEACONS = [];
+function nearGiver() { if (MS || !started) return null; const p = subj(); for (const m of MISSIONS) if (Math.hypot(p.x - m.giver[0], p.z - m.giver[1]) < 2.6 && Math.abs(p.y - groundY(...m.giver)) < 2) return m; return null; }
+function curTargets() { if (!MS) return []; const st = MS.m.steps[MS.step]; if (st.any) return st.any.filter(c => !MS.seen.has(c.name)).map(c => ({ at: c.at, name: c.name })); return [{ at: st.at }]; }
+function missionMarkers() {
+  if (!MISSIONS.length) return [];
+  if (MS) return curTargets().map(t => ({ x: t.at[0], z: t.at[1], c: '#3fc46b', t: '●', pin: true }));
+  return MISSIONS.map(m => ({ x: m.giver[0], z: m.giver[1], c: missionSave[m.id] ? '#b9b2a2' : '#ffd23f', t: '!', label: m.title }));
+}
+function startMission(m) {
+  if (MS) return;
+  MS = { m, step: 0, t: 0, seen: new Set() };
+  toast(`任務開始：${m.title}`, 3); say(player.g, m.intro.slice(0, 22) + (m.intro.length > 22 ? '…' : ''), 3);
+  $('mlist').hidden = true; updateMissionUI(); if (navigator.vibrate) navigator.vibrate(30);
+}
+function endMission(ok, why) {
+  const m = MS.m, t = MS.t; MS = null;
+  if (ok) {
+    const best = missionSave[m.id]; missionSave[m.id] = { best: best ? Math.min(best.best, t) : t }; saveMissions();
+    toast(`任務完成！${m.title}　${fmtT(t)}　＋${m.reward} 學分${best && t < best.best ? '　新紀錄！' : ''}`, 4.5);
+    if (actx && !muted) { const a = actx.currentTime; [523, 659, 784, 1047].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(.08, a + i * .12); g.gain.exponentialRampToValueAtTime(.001, a + i * .12 + .4); o.connect(g); g.connect(actx.destination); o.start(a + i * .12); o.stop(a + i * .12 + .45); }); }
+    if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
+  } else toast(`任務失敗：${why}`, 3.5);
+  updateMissionUI();
+}
+const fmtT = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+function missionTick(dt) {
+  for (const m of MISSIONS) { m.marker.visible = !MS; if (!MS) { m.sprite.position.y = 3.2 + Math.sin(performance.now() / 400) * .15; m.sprite.material.color.set(missionSave[m.id] ? 0xbbbbbb : 0xffffff); } }
+  const tg = curTargets(); MS_BEACONS.forEach((b, i) => { const t = tg[i]; b.visible = !!t; if (t) b.position.set(t.at[0], groundY(...t.at), t.at[1]); });
+  if (!MS) return;
+  MS.t += dt; const m = MS.m, st = m.steps[MS.step];
+  if (m.time && MS.t > m.time) return endMission(false, '時間到了');
+  if (st.any) { for (const c of st.any) if (!MS.seen.has(c.name) && distTo(...c.at) < c.r && (!c.check || c.check())) { MS.seen.add(c.name); toast(`打卡：${c.name}（${MS.seen.size}/${st.any.length}）`, 2.5); } if (MS.seen.size < st.any.length) return updateMissionUI(); }
+  else if (!(st.check ? st.check() : distTo(...st.at) < st.r)) return updateMissionUI();
+  if (++MS.step >= m.steps.length) return endMission(true);
+  toast(m.steps[MS.step].text, 3); updateMissionUI();
+}
+let lastMsUI = '';
+function updateMissionUI() {
+  const el = $('mission'); if (!MS) { el.hidden = true; lastMsUI = ''; return; }
+  const m = MS.m, st = m.steps[MS.step], tg = curTargets()[0];
+  const obj = st.any ? `${st.text}（${MS.seen.size}/${st.any.length}）：${st.any.filter(c => !MS.seen.has(c.name)).map(c => c.name).join('、')}` : st.text;
+  const d = tg ? Math.round(distTo(...tg.at)) : 0, left = m.time ? m.time - MS.t : MS.t;
+  const key = obj + d + Math.floor(left); if (key === lastMsUI) return; lastMsUI = key;
+  el.hidden = false; $('mT').textContent = m.title; $('mO').textContent = `${obj}　·　${d} m`;
+  $('mC').textContent = m.time ? `剩 ${fmtT(Math.max(0, left))}` : fmtT(left); $('mC').classList.toggle('low', !!m.time && left < 20);
+}
+function toggleMissionList() {
+  const el = $('mlist'); el.hidden = !el.hidden; if (el.hidden) return;
+  if (document.pointerLockElement) document.exitPointerLock();
+  const done = MISSIONS.filter(m => missionSave[m.id]), credits = done.reduce((a, m) => a + m.reward, 0);
+  $('mlSub').textContent = `已完成 ${done.length}/${MISSIONS.length}　·　學分 ${credits}　·　走到地圖上的黃色「!」按 F 接任務`;
+  const box = $('mlItems'); box.innerHTML = '';
+  for (const m of MISSIONS) {
+    const it = document.createElement('div'); it.className = 'it';
+    const sv = missionSave[m.id], active = MS && MS.m === m;
+    it.innerHTML = `<div><b></b> <span class="s"></span></div><div></div><div class="d"></div>`;
+    it.children[0].children[0].textContent = m.title; it.children[0].children[1].textContent = active ? '進行中' : sv ? `✓ 最佳 ${fmtT(sv.best)}` : `${m.reward} 學分${m.time ? '・限時 ' + fmtT(m.time) : ''}`;
+    it.children[2].textContent = m.intro;
+    const b = document.createElement('button'); b.type = 'button';
+    if (active) { b.textContent = '放棄'; b.className = 'x'; b.onclick = () => { endMission(false, '已放棄'); toggleMissionList(); }; }
+    else { b.textContent = '傳送到起點'; b.disabled = !!MS; b.onclick = () => { $('mlist').hidden = true; GTA.tp(m.giver[0] + 2, m.giver[1] + 2); }; }
+    it.children[1].appendChild(b); box.appendChild(it);
+  }
+}
+$('mlClose').addEventListener('click', () => { $('mlist').hidden = true; });
 
 /* ================= vehicle enter/exit ================= */
 function nearestVehicle() {
@@ -3266,7 +3486,9 @@ function applyTime() {
 let curZone = '', zoneTimer = 0;
 function zoneAt(x, z) {
   let best = null;
-  for (const zz of zones) if (x >= zz.minX && x <= zz.maxX && z >= zz.minZ && z <= zz.maxZ && (!best || zz.prio > best.prio)) best = zz;
+  // equal priority: the zone whose shape (building outline) is nearest wins, not whichever box was added first
+  const dist = zz => zz.pts ? (inPoly(x, z, zz.pts) ? 0 : polyEdgeDist(x, z, zz.pts)) : Math.hypot(x - (zz.minX + zz.maxX) / 2, z - (zz.minZ + zz.maxZ) / 2) / 4;
+  for (const zz of zones) if (x >= zz.minX && x <= zz.maxX && z >= zz.minZ && z <= zz.maxZ && (!best || zz.prio > best.prio || (zz.prio === best.prio && dist(zz) < dist(best)))) best = zz;
   if (best) return [best.name, best.campus];
   if (inPoly(x, z, EAST_POLY)) return ['東校區', '第一校區・教學研究區'];
   if (inPoly(x, z, WEST_POLY)) return ['西校區', '第一校區・運動休憩區'];
@@ -3282,7 +3504,7 @@ function updateZone(dt) {
   updateTouchUI();
 }
 let toastT = 0;
-function toast(t) { $('toast').textContent = t; $('toast').classList.add('on'); toastT = 2.2; }
+function toast(t, dur = 2.2) { $('toast').textContent = t; $('toast').classList.add('on'); toastT = dur; }
 
 
 const MAP = { minX: -940, maxX: 880, minZ: -560, maxZ: 380, S: 2 };
@@ -3319,6 +3541,9 @@ function drawMini() {
   // parking markers
   mctx.font = `600 ${22 * k / 1.75}px Teko, ${FONT}`; mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
   for (const L of LOTS) { const [x, y] = toM(L.x, L.z); if (Math.hypot(x - R, y - R) > R - 14) continue; mctx.fillStyle = '#1d5f9e'; mctx.beginPath(); mctx.roundRect(x - 13, y - 11, 26, 22, 4); mctx.fill(); mctx.fillStyle = '#fff'; mctx.fillText(L.id, x, y + 2); }
+  // mission markers: yellow ! for missions you can take, green for the current target (pinned to the rim when far)
+  for (const mk of missionMarkers()) { let [x, y] = toM(mk.x, mk.z); const d = Math.hypot(x - R, y - R), lim = R - 16; if (d > lim) { if (!mk.pin) continue; x = R + (x - R) / d * lim; y = R + (y - R) / d * lim; }
+    mctx.fillStyle = mk.c; mctx.strokeStyle = '#000'; mctx.lineWidth = 3; mctx.beginPath(); mctx.arc(x, y, mk.pin ? 11 : 12, 0, 7); mctx.fill(); mctx.stroke(); mctx.fillStyle = '#111'; mctx.font = `900 18px ${FONT}`; mctx.fillText(mk.t, x, y + 1); }
   // north marker
   const [nx, ny] = toM(s.x, s.z - 1000); const na = Math.atan2(ny - R, nx - R);
   const px = R + Math.cos(na) * (R - 16), py = R + Math.sin(na) * (R - 16);
@@ -3344,6 +3569,7 @@ function drawBig() {
   }
   bctx.font = `900 22px ${FONT}`; bctx.fillStyle = 'rgba(246,241,231,.85)';
   bctx.fillText('東校區　教學研究區', f(560), g(-120)); bctx.fillText('西校區　運動休憩區', f(-560), g(-180)); bctx.save(); bctx.translate(f(-60), g(-300)); bctx.rotate(-.27); bctx.rotate(-Math.PI / 2); bctx.font = `700 14px ${FONT}`; bctx.fillText('國道一號', 0, 0); bctx.restore();
+  for (const mk of missionMarkers()) { bctx.fillStyle = mk.c; bctx.strokeStyle = '#000'; bctx.lineWidth = 3; bctx.beginPath(); bctx.arc(f(mk.x), g(mk.z), 11, 0, 7); bctx.fill(); bctx.stroke(); bctx.fillStyle = '#111'; bctx.font = `900 15px ${FONT}`; bctx.fillText(mk.t, f(mk.x), g(mk.z) + 1); if (mk.label) { bctx.font = `700 12px ${FONT}`; bctx.lineWidth = 3; bctx.strokeStyle = 'rgba(0,0,0,.8)'; bctx.strokeText(mk.label, f(mk.x), g(mk.z) - 18); bctx.fillStyle = '#ffe27a'; bctx.fillText(mk.label, f(mk.x), g(mk.z) - 18); } }
   const s = player.vehicle ? player.vehicle.pos : player.pos;
   bctx.fillStyle = '#f2a93b'; bctx.strokeStyle = '#000'; bctx.lineWidth = 3; bctx.beginPath(); bctx.arc(f(s.x), g(s.z), 8, 0, 7); bctx.fill(); bctx.stroke();
 }
@@ -3387,7 +3613,7 @@ function loop(now) {
     const a = introT * .045; camera.position.set(330 + Math.cos(a) * 300, 120, -250 + Math.sin(a) * 300); camera.lookAt(330, 10, -250);
   }
   updatePeds(dt); updateTraffic(dt); updateDog(dt);
-  if (started) { passingRemarks(dt); ghostTick(dt); lifeTick(dt); }
+  if (started) { passingRemarks(dt); ghostTick(dt); lifeTick(dt); missionTick(dt); }
   updateBubbles(dt);
   for (const v of vehicles) if (v.npc && !started) updateNpcCar(v, dt);
   const t = now / 1000;
@@ -3417,6 +3643,8 @@ window.GTA = {
     return { nu: G.nu, nv: G.nv, u0: G.u0, v0: G.v0, F: G.F, lab: Array.from(G.lab), room: Array.from(G.room), rooms: G.rooms.map(r => ({ id: r.id, type: r.type, doors: (r.doors || []).map(d => d.P) })), cores: I.cores, poly: I.poly, walls: walls.filter(w => w.yMin <= I.levels[k] + .1 && w.yMax >= I.levels[k] + .1 && inBox(w.x1, w.z1, I.box)).map(w => [w.x1, w.z1, w.x2, w.z2]), inst }; },
   enter(v) { if (player.vehicle) exitVehicle(true); player.pos.set(v.pos.x, v.pos.y, v.pos.z); const f = nearestVehicle; nearestVehicle = () => v; try { toggleVehicle(); } finally { nearestVehicle = f; } },
   dbg() { const cs = new Set(); for (const a of grid.values()) for (const o of a) cs.add(o); return { circles: [...cs], colliders, walls, ROADS, treeSpots, pavedPolys, LOTS, BIKE_SPOTS, lampSpots }; },
+  missions() { return { list: MISSIONS.map(m => ({ id: m.id, title: m.title, giver: m.giver, steps: m.steps.map(st => st.any ? st.any.map(c => [c.name, c.at]) : [st.text, st.at]) })), active: MS && { id: MS.m.id, step: MS.step, t: MS.t, seen: [...MS.seen] }, save: missionSave }; },
+  startMission(id) { startMission(MISSIONS.find(m => m.id === id)); }, tick(dt = 1 / 60) { missionTick(dt); },
   get survey() { return SURVEY; }, eggs() { return [...EGGS]; }, action() { const a = actionInfo(); return a && a.label; }, doAction, get peds() { return peds; }, get dog() { return dog; }, get freshman() { return freshman; }, bubbles() { return bubbles.map(b => b.el.textContent); },
   setNight(v) { isNight = v; applyTime(); }, setTime(m) { gameMin = m; }, life(dt = 1 / 60) { lifeTick(dt, true); return { key: lifeKey, crowd: crowd.filter(c => c.g.visible).map(c => c.kind), seated: lifeMesh ? lifeMesh.geometry.index.count / 36 / 15 : 0, sch: schedule() }; }, step(n) { for (let i = 0; i < n; i++) { updatePeds(1 / 60); updateDog(1 / 60); passingRemarks(1 / 60); ghostTick(1 / 60); updateZone(1 / 60); } }, get lots() { return LOTS.map(l => [l.id, l.stalls.length]); },
   roomAt(I, x, z, k) { const G = I.plan.grids ? I.plan.grids[Math.min(k, I.plan.grids.length - 1)] : k === 0 ? I.plan.gr : I.plan.up; const c = gI(G, ...gUV(G, x, z)); return c < 0 ? -2 : G.room[c]; },
@@ -3437,7 +3665,7 @@ async function boot() {
   for (const b of SURVEY.bld) buildBuilding(b);
   buildLots(); buildSports(); buildGates(); buildBoundary(); buildFurniture();
   buildSpecials(); planTrees(); buildTrees(); buildPaint();
-  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs();
+  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs(); setupMissions();
   const A = BUILT.find(b => b.name === '行政大樓'), E = A.entrance;
   SPAWN.x = E.x + E.nx * 14; SPAWN.z = E.z + E.nz * 14; SPAWN.yaw = Math.atan2(-E.nx, -E.nz);
   player.pos.set(SPAWN.x, groundY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw;
