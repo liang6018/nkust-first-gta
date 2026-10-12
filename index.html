@@ -2369,22 +2369,29 @@ function buildTrees() {
   const broad = [...treeSpots.round.map(t => [t[4] ? 's' : 'r', t]), ...treeSpots.rain.map(t => ['a', t])];
   const trunks = mk(trunkGeo, trunkMat, broad.length + treeSpots.terminalia.length);
   const crowns = mk(blob, leafMat, broad.length);
+  // how far a crown can spread here before it reaches a building wall (trees never grow into facades)
+  const roomAt = (x, z) => { let d = 99; for (const b of BUILT) { const bb = bboxOf(b.pts, 14); if (!inBox(x, z, bb)) continue; d = Math.min(d, inPoly(x, z, b.pts) ? 0 : polyEdgeDist(x, z, b.pts)); } return d - .6; };
+  const hide = new THREE.Matrix4().makeScale(0, 0, 0);
   broad.forEach(([k, [x, z, , far]], i) => {
-    const y0 = groundY(x, z), rain = k === 'a';
-    const s = rain ? rr(6.5, 8) : rr(2.4, 4.2), th = rain ? rr(3.5, 4.5) : s * rr(.9, 1.3);
+    const y0 = groundY(x, z), rain = k === 'a', room = far ? 99 : roomAt(x, z);
+    let s = rain ? rr(4.6, 5.6) : rr(2.4, 4.2); s = Math.min(s, room / (rain ? 1.4 : 1.15)); // crown reach ≈ 1.4 s (rain tree) / 1.15 s
+    if (s < (rain ? 3 : 1.8)) { trunks.setMatrixAt(i, hide); crowns.setMatrixAt(i, hide); crowns.setColorAt(i, col.set(0x000000)); return; }
+    const th = rain ? rr(3.5, 4.5) : s * rr(.9, 1.3);
     m4.compose(new THREE.Vector3(x, y0, z), q.identity(), new THREE.Vector3(rain ? 2.6 : s * .35, th, rain ? 2.6 : s * .35)); trunks.setMatrixAt(i, m4);
     e.set(0, rnd() * 6.28, 0); q.setFromEuler(e);
     m4.compose(new THREE.Vector3(x, y0 + th + (rain ? 1.6 : s * .55), z), q, new THREE.Vector3(s * (rain ? 1.35 : 1), s * (rain ? .38 : .8), s * (rain ? 1.35 : 1))); crowns.setMatrixAt(i, m4);
     if (rain) col.setHSL(.26, .42, rr(.17, .22)); else col.setHSL(rr(.19, .3), rr(.35, .55), rr(.22, .36));
     crowns.setColorAt(i, col);
-    if (!far) addCircle(x, z, rain ? 1.1 : k === 's' ? .3 : .45);
+    if (!far) addCircle(x, z, rain ? .8 : k === 's' ? .3 : .45);
   });
   const tc = mk(tiers, leafMat, treeSpots.terminalia.length);
   treeSpots.terminalia.forEach(([x, z, , far], i) => {
+    const sc = Math.min(rr(.85, 1.1), (far ? 99 : roomAt(x, z)) / 3.5); // tiers reach 3.3 m
+    if (sc < .5) { trunks.setMatrixAt(broad.length + i, hide); tc.setMatrixAt(i, hide); tc.setColorAt(i, col.set(0x000000)); return; }
     const y0 = groundY(x, z), th = rr(9, 12);
     m4.compose(new THREE.Vector3(x, y0, z), q.identity(), new THREE.Vector3(1.1, th, 1.1)); trunks.setMatrixAt(broad.length + i, m4);
     e.set(0, rnd() * 6.28, 0); q.setFromEuler(e);
-    m4.compose(new THREE.Vector3(x, y0 + th - 6.2, z), q, new THREE.Vector3(1, 1, 1).multiplyScalar(rr(.85, 1.1))); tc.setMatrixAt(i, m4);
+    m4.compose(new THREE.Vector3(x, y0 + th - 6.2, z), q, new THREE.Vector3(1, 1, 1).multiplyScalar(sc)); tc.setMatrixAt(i, m4);
     col.setHSL(rr(.22, .27), .5, rr(.3, .38)); tc.setColorAt(i, col);
     if (!far) addCircle(x, z, .35);
   });
@@ -2397,12 +2404,14 @@ function buildTrees() {
   const shaft = mk(new THREE.CylinderGeometry(.3, .34, 2.4, 10).translate(0, 1.2, 0), M(0x6f8f3a, { roughness: .7 }), treeSpots.royal.length);
   let ri = 0;
   allPalm.forEach(([royal, [x, z, , far]], i) => {
+    const fs = Math.min(royal ? rr(1.25, 1.45) : rr(.9, 1.2), (far ? 99 : roomAt(x, z)) / 3.7); // fronds reach 3.6 m
+    if (fs < .55) { pt.setMatrixAt(i, hide); pf.setMatrixAt(i, hide); pt.setColorAt(i, col.set(0)); pf.setColorAt(i, col.set(0)); if (royal) shaft.setMatrixAt(ri++, hide); return; }
     const y0 = groundY(x, z), h = royal ? rr(13, 17) : rr(7, 11);
     e.set(royal ? 0 : rr(-.05, .05), 0, royal ? 0 : rr(-.05, .05)); q.setFromEuler(e);
     m4.compose(new THREE.Vector3(x, y0, z), q, new THREE.Vector3(royal ? 1.7 : 1, h, royal ? 1.7 : 1)); pt.setMatrixAt(i, m4);
     pt.setColorAt(i, col.set(royal ? 0xb9b7ae : 0x8b7b66));
     e.set(0, rnd() * 6.28, 0); q.setFromEuler(e);
-    m4.compose(new THREE.Vector3(x, y0 + h + (royal ? 2.4 : 0), z), q, new THREE.Vector3(1, 1, 1).multiplyScalar(royal ? rr(1.25, 1.45) : rr(.9, 1.2))); pf.setMatrixAt(i, m4);
+    m4.compose(new THREE.Vector3(x, y0 + h + (royal ? 2.4 : 0), z), q, new THREE.Vector3(1, 1, 1).multiplyScalar(fs)); pf.setMatrixAt(i, m4);
     col.setHSL(rr(.22, .28), .5, rr(.25, .33)); pf.setColorAt(i, col);
     if (royal) { m4.compose(new THREE.Vector3(x, y0 + h, z), q.identity(), new THREE.Vector3(1, 1, 1)); shaft.setMatrixAt(ri++, m4); }
     if (!far) addCircle(x, z, royal ? .45 : .35);
