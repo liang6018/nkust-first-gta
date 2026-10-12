@@ -82,6 +82,12 @@ body.touch #start .keys{display:none;} body.touch #start .tkeys{display:grid;gri
 #start .keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:4px 18px;font-size:13px;color:var(--paper);}
 #start .keys span{display:flex;gap:8px;align-items:center;}
 #start .keys b{font-family:var(--f-num);font-size:18px;font-weight:500;min-width:58px;color:var(--amber);}
+#goBox{display:grid;gap:10px;justify-items:start;}
+#qual{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);}
+#qual span{margin-right:4px;letter-spacing:.15em;}
+.qbtn{font:inherit;font-weight:700;font-size:14px;min-width:44px;min-height:34px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--paper);cursor:pointer;}
+.qbtn.on{background:var(--amber);color:#1a1206;border-color:var(--amber);}
+#qnote{font-size:11px;color:var(--muted);}
 #go{justify-self:start;font-family:var(--f-ui);font-weight:900;font-size:20px;letter-spacing:.1em;background:var(--amber);color:#1a1206;border:0;border-radius:4px;
   padding:14px 34px;cursor:pointer;transform:skewX(-8deg);box-shadow:5px 5px 0 #000;}
 #go:hover{background:#ffbe55;} #go:focus-visible{outline:3px solid var(--paper);outline-offset:3px;}
@@ -135,7 +141,7 @@ body.touch #toast{top:calc(60px + env(safe-area-inset-top,0px));font-size:14px;m
   #start{place-items:start center;}
   #start .card{max-width:min(900px,100%);grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);grid-template-areas:"eye eye" "h1 p" "go keys" "go note";gap:8px 22px;align-items:start;}
   #start .eyebrow{grid-area:eye;font-size:11px;} #start h1{grid-area:h1;font-size:clamp(34px,12vh,64px);} #start p{grid-area:p;font-size:12px;line-height:1.55;}
-  #start .keys,#start .tkeys{grid-area:keys;font-size:12px;} #start #note{grid-area:note;font-size:10px!important;} #go{grid-area:go;align-self:start;font-size:18px;padding:12px 28px;margin-top:4px;}
+  #start .keys,#start .tkeys{grid-area:keys;font-size:12px;} #start #note{grid-area:note;font-size:10px!important;} #goBox{grid-area:go;align-self:start;} #qnote{display:none;} #go{font-size:18px;padding:12px 28px;margin-top:4px;}
 }
 @media (max-height:540px) and (max-width:700px){ #start p{display:none;} #start .card{grid-template-areas:"eye eye" "h1 keys" "go keys" "go note";} }
 body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
@@ -165,6 +171,7 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
   <div class="row"><kbd>SPACE</kbd>手煞車　<kbd>H</kbd>喇叭／鈴鐺　<kbd>L</kbd>大燈</div>
   <h3>其他</h3>
   <div class="row"><kbd>J</kbd>任務清單　<kbd>M</kbd>大地圖（點擊傳送）　<kbd>N</kbd>日／夜</div>
+  <div class="row"><kbd>G</kbd>切換畫質（低／中／高）</div>
   <div class="row"><kbd>R</kbd>回到行政大樓　<kbd>滾輪</kbd>鏡頭遠近</div>
 </div>
 
@@ -182,6 +189,7 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
     <button type="button" class="tb sm" data-k="KeyJ">任務</button>
     <button type="button" class="tb sm" data-k="KeyM">地圖</button>
     <button type="button" class="tb sm" data-k="KeyN">日夜</button>
+    <button type="button" class="tb sm" data-k="KeyG" id="bQual">畫質</button>
     <button type="button" class="tb sm" id="bFull">全螢幕</button>
   </div>
   <div id="rotate" hidden>橫放手機玩起來更順</div>
@@ -206,7 +214,9 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
       <span><b>右半邊</b>拖曳轉視角</span>
       <span><b>大按鈕</b>靠近車、人、狗才出現</span>
     </div>
-    <button id="go" type="button" disabled>載入校園中…</button>
+    <div id="goBox"><button id="go" type="button" disabled>載入校園中…</button>
+      <div id="qual"><span>畫質</span><button type="button" class="qbtn" data-q="low">低</button><button type="button" class="qbtn" data-q="mid">中</button><button type="button" class="qbtn" data-q="high">高</button></div>
+      <div id="qnote">手機卡頓選「低」：解析度較低、沒有陰影、看得比較近、30 FPS</div></div>
     <p id="note">道路、建築輪廓、停車場、球場與鴴池依 OpenStreetMap 輪廓並對照 Google 衛星圖重建（誤差約 1~3 公尺）；外觀依 Google 街景目測。部分建築（工廠、職務宿舍等）沒有街景，外觀為推估。</p>
   </div>
 </div>
@@ -238,17 +248,27 @@ function shade(hex, amt) {
 }
 
 /* ================= renderer / scene ================= */
-const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+/* graphics quality: 低 / 中 / 高. Phones default to 中 (or 低 on older ones); saved per browser.
+   Antialias and the log depth buffer are fixed when the renderer is made, so they follow the level chosen at load. */
+const QUALITY = {
+  low: { name: '低', pr: .75, shadow: 0, far: 900, fogN: 150, fogF: 850, veh: 110, ped: 70, traffic: 320, fps: 30 },
+  mid: { name: '中', pr: 1, shadow: 1024, far: 1800, fogN: 260, fogF: 1500, veh: 180, ped: 120, traffic: 500, fps: 0 },
+  high: { name: '高', pr: 1.5, shadow: 2048, far: 6000, fogN: 350, fogF: 2300, veh: 260, ped: 170, traffic: 700, fps: 0 },
+};
+const touchDevice = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+let QL = (() => { try { const q = localStorage.getItem('nkust-gta-quality'); if (QUALITY[q]) return q; } catch (e) { } if (!touchDevice) return 'high'; const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4; return mem >= 6 && cores >= 8 ? 'mid' : 'low'; })();
+let Q = QUALITY[QL];
+const renderer = new THREE.WebGLRenderer({ antialias: QL === 'high', logarithmicDepthBuffer: QL !== 'low', powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, Q.pr));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = QL === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 $('stage').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xbfd3e0, 350, 2300);
-const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.1, 6000);
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, QL === 'low' ? .25 : 0.1, Q.far);
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
 
 const sky = new Sky(); sky.scale.setScalar(9000); scene.add(sky);
@@ -260,6 +280,18 @@ sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -95, right: 95, top: 95, bottom: -95, near: 1, far: 700 });
 sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.05;
 scene.add(sun, sun.target);
+function applyQuality(q, save = true) {
+  QL = q; Q = QUALITY[q];
+  renderer.setPixelRatio(Math.min(devicePixelRatio, Q.pr)); renderer.setSize(innerWidth, innerHeight);
+  sun.castShadow = Q.shadow > 0;
+  if (Q.shadow && sun.shadow.mapSize.x !== Q.shadow) { sun.shadow.mapSize.set(Q.shadow, Q.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+  camera.far = Q.far; camera.updateProjectionMatrix();
+  if (save) applyTime(); // fog distances (not during start-up: the time of day isn't set up yet)
+  if (save) try { localStorage.setItem('nkust-gta-quality', q); } catch (e) { }
+  document.querySelectorAll('.qbtn').forEach(b => b.classList.toggle('on', b.dataset.q === q));
+  const qb = document.getElementById('bQual'); if (qb) qb.textContent = '畫質：' + Q.name;
+}
+applyQuality(QL, false);
 const pmrem = new THREE.PMREMGenerator(renderer);
 let envRT = null, isNight = false, lightDir = new THREE.Vector3(0.5, 0.7, 0.4).normalize();
 
@@ -3036,6 +3068,7 @@ function onPress(code) {
   if (code === 'KeyM' || (code === 'Escape' && mapOpen)) toggleMap();
   if (code === 'KeyJ' || (code === 'Escape' && !$('mlist').hidden)) toggleMissionList();
   if (code === 'KeyN') { isNight = !isNight; applyTime(); gameMin = isNight ? 21 * 60 + 40 : 10 * 60 + 24; lastPhase = null; toast(isNight ? '夜晚 21:40' : '白天 10:24'); }
+  if (code === 'KeyG') { const order = ['low', 'mid', 'high'], q = order[(order.indexOf(QL) + 1) % 3]; applyQuality(q); toast(`畫質：${QUALITY[q].name}${q === 'high' && !renderer.getContextAttributes().antialias ? '（重新整理後反鋸齒才會生效）' : ''}`); }
   if (code === 'KeyL') { lightsOn = !lightsOn; toast(lightsOn ? '大燈 開' : '大燈 關'); }
   if (code === 'KeyH') horn();
   if (code === 'Tab') $('help').hidden = !$('help').hidden;
@@ -3424,7 +3457,7 @@ function updateCoasting(v, dt) {
 function startFlee(p, from) { p.state = 'flee'; p.timer = rr(3, 5); const dx = p.g.position.x - from.x, dz = p.g.position.z - from.z, d = Math.hypot(dx, dz) || 1; p.flee = [dx / d, dz / d]; }
 function updatePeds(dt) {
   for (const p of peds) {
-    const far = p.g.position.distanceToSquared(camera.position) > 170 * 170;
+    const far = p.g.position.distanceToSquared(camera.position) > Q.ped * Q.ped;
     p.g.visible = !far && !p.hidden;
     if (p.state === 'down') {
       p.timer -= dt; p.g.position.addScaledVector(p.vel, dt); p.vel.y -= 14 * dt; p.vel.x *= .96; p.vel.z *= .96;
@@ -3466,7 +3499,7 @@ function updateTraffic(dt) {
     t.s += t.speed * dt; const mid = t.F.len / 2; if (t.s > mid + 1500) t.s = mid - 1500;
     const [x, z, tx, tz] = sampleLine(t.F.pts, t.s);
     t.mesh.position.set(x - tz * t.off, 0, z + tx * t.off); t.mesh.rotation.y = Math.atan2(tx, tz);
-    t.mesh.visible = Math.hypot(t.mesh.position.x - camera.position.x, t.mesh.position.z - camera.position.z) < 700;
+    t.mesh.visible = Math.hypot(t.mesh.position.x - camera.position.x, t.mesh.position.z - camera.position.z) < Q.traffic;
   }
 }
 
@@ -3505,10 +3538,10 @@ function applyTime() {
   su.sunPosition.value.copy(sd);
   if (isNight) {
     lightDir.set(-.35, .85, .4).normalize(); sun.intensity = .35; sun.color.set(0x9db2ff); hemi.intensity = .28; hemi.color.set(0x48609a); hemi.groundColor.set(0x14181c);
-    renderer.toneMappingExposure = .62; scene.fog.color.set(0x0b0f1c); scene.fog.near = 200; scene.fog.far = 1600; scene.environmentIntensity = .25; stars.visible = true;
+    renderer.toneMappingExposure = .62; scene.fog.color.set(0x0b0f1c); scene.fog.near = Math.min(200, Q.fogN); scene.fog.far = Math.min(1600, Q.fogF); scene.environmentIntensity = .25; stars.visible = true;
   } else {
     lightDir.copy(sd); sun.intensity = 3.2; sun.color.set(0xfff0d8); hemi.intensity = 1.0; hemi.color.set(0xd6e8ff); hemi.groundColor.set(0x55663a);
-    renderer.toneMappingExposure = .5; scene.fog.color.set(0xbfd3e0); scene.fog.near = 350; scene.fog.far = 2300; scene.environmentIntensity = 1; stars.visible = false;
+    renderer.toneMappingExposure = .5; scene.fog.color.set(0xbfd3e0); scene.fog.near = Q.fogN; scene.fog.far = Q.fogF; scene.environmentIntensity = 1; stars.visible = false;
   }
   for (const m of winMats) m.emissiveIntensity = isNight ? 1.4 : 0;
   matLamp.emissiveIntensity = isNight ? 6 : 0;
@@ -3626,12 +3659,15 @@ $('mapClose').addEventListener('click', e => { e.stopPropagation(); if (mapOpen)
 
 /* ================= main loop ================= */
 let last = performance.now(), introT = 0;
+let lastFrame = 0;
 function loop(now) {
+  if (Q.fps && now - lastFrame < 1000 / Q.fps - 3) { requestAnimationFrame(loop); return; } // 低: 30 fps cap keeps old phones cool
+  lastFrame = now;
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   if (started) {
     if (!player.vehicle) updatePlayer(dt);
     for (const v of vehicles) {
-      const far = Math.abs(v.pos.x - camera.position.x) > 260 || Math.abs(v.pos.z - camera.position.z) > 260;
+      const far = Math.abs(v.pos.x - camera.position.x) > Q.veh || Math.abs(v.pos.z - camera.position.z) > Q.veh;
       v.mesh.visible = !far;
       if (v === player.vehicle) { const a = axes(); driveVehicle(v, dt, { fwd: a.f > .2, back: a.f < -.2, steer: -a.r, brake: !!keys.Space }); player.pos.copy(v.pos); }
       else if (v.npc) updateNpcCar(v, dt);
@@ -3677,6 +3713,7 @@ window.GTA = {
   near(x, z, y) { const o = []; for (const w of walls) { if (y < w.yMin || y > w.yMax) continue; const [d] = segDist(x, z, w.x1, w.z1, w.x2, w.z2); if (d < 1) o.push(['W', +d.toFixed(2), +Math.hypot(w.x2 - w.x1, w.z2 - w.z1).toFixed(2), w.m, w.yMin, w.yMax]); } for (const [, list] of grid) for (const c of list) { if (y < c.y0 || y > c.y1) continue; const d = Math.hypot(x - c.x, z - c.z) - c.r; if (d < .8) o.push(['C', +d.toFixed(2), c.r]); } return o; },
   vis() { updateInteriorVis(); },
   lite() { renderer.shadowMap.enabled = false; renderer.setPixelRatio(1); sun.castShadow = false; },
+  quality(q) { if (q) applyQuality(q); return { QL, pr: renderer.getPixelRatio(), shadow: sun.castShadow, far: camera.far }; },
   plan(name, k) { const I = INTERIORS.find(i => i.name === name), G = I.plan.grids ? I.plan.grids[Math.min(k, I.plan.grids.length - 1)] : k ? I.plan.up : I.plan.gr; const inst = []; I.group.traverse(o => { if (o.isInstancedMesh) { const m = new THREE.Matrix4(), p = new THREE.Vector3(); for (let i = 0; i < o.count; i++) { o.getMatrixAt(i, m); p.setFromMatrixPosition(m); const y0 = I.levels[k], y1 = k + 1 < I.levels.length ? I.levels[k + 1] : I.h; if (p.y >= y0 - .05 && p.y < y1 - .3) inst.push([+p.x.toFixed(2), +p.z.toFixed(2)]); } } });
     return { nu: G.nu, nv: G.nv, u0: G.u0, v0: G.v0, F: G.F, lab: Array.from(G.lab), room: Array.from(G.room), rooms: G.rooms.map(r => ({ id: r.id, type: r.type, doors: (r.doors || []).map(d => d.P) })), cores: I.cores, poly: I.poly, walls: walls.filter(w => w.yMin <= I.levels[k] + .1 && w.yMax >= I.levels[k] + .1 && inBox(w.x1, w.z1, I.box)).map(w => [w.x1, w.z1, w.x2, w.z2]), inst }; },
   enter(v) { if (player.vehicle) exitVehicle(true); player.pos.set(v.pos.x, v.pos.y, v.pos.z); const f = nearestVehicle; nearestVehicle = () => v; try { toggleVehicle(); } finally { nearestVehicle = f; } },
@@ -3713,6 +3750,12 @@ async function boot() {
   const go = $('go'); go.disabled = false; go.textContent = '開始遊戲'; go.focus();
   requestAnimationFrame(loop);
 }
+document.querySelectorAll('.qbtn').forEach(b => b.addEventListener('click', () => {
+  const q = b.dataset.q, ca = renderer.getContextAttributes(), needAA = q === 'high', needLog = q !== 'low';
+  applyQuality(q);
+  // antialias / depth buffer are fixed per renderer: reload once (still on the start screen) so the chosen level fully applies
+  if (!started && (!!ca.antialias !== needAA || renderer.capabilities.logarithmicDepthBuffer !== needLog)) { $('go').disabled = true; $('go').textContent = '套用畫質中…'; setTimeout(() => location.reload(), 50); }
+}));
 $('go').addEventListener('click', () => {
   started = true; $('start').hidden = true; document.body.classList.add('playing'); initAudio();
   camYaw = player.yaw + Math.PI; camPos.set(player.pos.x, 4, player.pos.z - 6); camTarget.copy(player.pos);
