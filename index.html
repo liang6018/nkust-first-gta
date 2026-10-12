@@ -3147,9 +3147,58 @@ $('sound').addEventListener('click', () => { muted = !muted; $('sound').textCont
 function horn() {
   if (player.vehicle) for (const p of peds) if (p.state === 'walk' && !p.role && p.g.position.distanceTo(player.vehicle.pos) < 18) { startFlee(p, player.vehicle.pos); if (rnd() < .4) say(p.g, pick(LINES.scared), 2); }
   if (!actx || muted || !player.vehicle) return;
-  const t = actx.currentTime, g = actx.createGain(); g.gain.setValueAtTime(.12, t); g.gain.exponentialRampToValueAtTime(.001, t + .45); g.connect(actx.destination);
-  if (player.vehicle.type === 'bike') { for (const t0 of [0, .16]) { const gb = actx.createGain(); gb.gain.setValueAtTime(.09, t + t0); gb.gain.exponentialRampToValueAtTime(.001, t + t0 + .5); gb.connect(actx.destination); for (const fq of [2093, 2637]) { const o = actx.createOscillator(); o.type = 'sine'; o.frequency.value = fq; o.connect(gb); o.start(t + t0); o.stop(t + t0 + .5); } } return; } // 叮叮
-  for (const fq of player.vehicle.type === 'car' ? [392, 494] : [620, 740]) { const o = actx.createOscillator(); o.type = 'square'; o.frequency.value = fq; o.connect(g); o.start(t); o.stop(t + .45); }
+  if (player.vehicle.type === 'bike') return bikeBell();
+  hornStart(player.vehicle.type);
+}
+/* Horn synthesis. A car's electric disc horns are a pair (~410 Hz + ~500 Hz, about a minor third apart): a
+   diaphragm slapped by a contact gives a buzzy, odd-harmonic-rich tone, shaped by the horn's resonances
+   (~1.4 / 2.6 / 3.8 kHz) and slightly overdriven. A Taiwanese scooter has a single, thinner and higher horn
+   with an audible buzz. It sounds while H (or the phone button) is held, at least a short "叭". */
+let hornV = null, hornCurve = null;
+function hornStart(type) {
+  if (hornV) return;
+  const t = actx.currentTime, car = type === 'car', out = actx.createGain(), mix = actx.createGain();
+  if (!hornCurve) { hornCurve = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; hornCurve[i] = Math.tanh(x * 3.2) / Math.tanh(3.2); } }
+  const shaper = actx.createWaveShaper(); shaper.curve = hornCurve; shaper.oversample = '2x';
+  const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = car ? 280 : 330;
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = car ? 5200 : 4200;
+  const peaks = (car ? [[1400, 6, 3], [2600, 5, 4], [3800, 3, 5]] : [[1900, 7, 4], [3100, 4, 5]]).map(([f, gdb, q]) => { const pk = actx.createBiquadFilter(); pk.type = 'peaking'; pk.frequency.value = f; pk.gain.value = gdb; pk.Q.value = q; return pk; });
+  mix.gain.value = car ? .5 : .55;
+  const oscs = [];
+  for (const [f, w] of car ? [[412, 1], [497, .9]] : [[455, 1]]) {
+    // each horn: a sawtooth (all harmonics) layered with a square at the same pitch (extra odd harmonics) for the buzz
+    for (const [typ, lvl] of [['sawtooth', .55 * w], ['square', .35 * w]]) {
+      const o = actx.createOscillator(); o.type = typ; o.frequency.setValueAtTime(f * .97, t); o.frequency.exponentialRampToValueAtTime(f, t + .035); // pitch settles as the diaphragm gets going
+      const og = actx.createGain(); og.gain.value = lvl; o.connect(og); og.connect(mix); o.start(t); oscs.push(o);
+      const lfo = actx.createOscillator(), lg = actx.createGain(); lfo.frequency.value = 5 + Math.random() * 2; lg.gain.value = f * .003; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); oscs.push(lfo);
+    }
+  }
+  if (!car) { // contact-breaker buzz on the scooter horn
+    const am = actx.createOscillator(), ag = actx.createGain(); am.type = 'square'; am.frequency.value = 92; ag.gain.value = .25; am.connect(ag); ag.connect(mix.gain); am.start(t); oscs.push(am);
+  }
+  let node = mix; for (const n of [shaper, hp, ...peaks, lp]) { node.connect(n); node = n; }
+  node.connect(out);
+  // a little outdoor slap-back off the buildings
+  const dly = actx.createDelay(.5), dg = actx.createGain(); dly.delayTime.value = .07; dg.gain.value = .12; node.connect(dly); dly.connect(dg); dg.connect(out);
+  const vol = car ? .16 : .11;
+  out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(vol, t + .012); out.connect(actx.destination);
+  hornV = { out, oscs, t0: t, vol };
+}
+function hornStop() {
+  if (!hornV) return;
+  const v = hornV, t = Math.max(actx.currentTime, v.t0 + .16); hornV = null; // a tap still gives a short 叭
+  v.out.gain.setValueAtTime(v.vol, t); v.out.gain.linearRampToValueAtTime(0, t + .06);
+  for (const o of v.oscs) o.stop(t + .1);
+}
+function hornTick() { if (hornV && (!keys.KeyH || !player.vehicle || muted)) hornStop(); }
+/* bicycle bell: a struck brass dome, inharmonic partials ringing down, struck twice (叮叮) */
+function bikeBell() {
+  const t = actx.currentTime;
+  for (const t0 of [0, .17]) for (const [f, a, d] of [[2380, .08, 1.1], [2380 * 2.76, .035, .5], [2380 * 5.4, .015, .25], [2380 * 1.52, .02, .7]]) {
+    const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t + t0); g.gain.linearRampToValueAtTime(a, t + t0 + .003); g.gain.exponentialRampToValueAtTime(.0005, t + t0 + d);
+    o.connect(g); g.connect(actx.destination); o.start(t + t0); o.stop(t + t0 + d + .05);
+  }
 }
 
 /* ================= campus missions =================
@@ -3687,7 +3736,7 @@ function loop(now) {
     const a = introT * .045; camera.position.set(330 + Math.cos(a) * 300, 120, -250 + Math.sin(a) * 300); camera.lookAt(330, 10, -250);
   }
   updatePeds(dt); updateTraffic(dt); updateDog(dt);
-  if (started) { passingRemarks(dt); ghostTick(dt); lifeTick(dt); missionTick(dt); }
+  if (started) { passingRemarks(dt); ghostTick(dt); lifeTick(dt); missionTick(dt); if (actx) hornTick(); }
   updateBubbles(dt);
   for (const v of vehicles) if (v.npc && !started) updateNpcCar(v, dt);
   const t = now / 1000;
@@ -3720,6 +3769,10 @@ window.GTA = {
   dbg() { const cs = new Set(); const gaps = []; for (const a of grid.values()) for (const o of a) cs.add(o); return { circles: [...cs], DECKS, colliders, walls, ROADS, treeSpots, pavedPolys, LOTS, BIKE_SPOTS, lampSpots }; },
   missions() { return { list: MISSIONS.map(m => ({ id: m.id, title: m.title, giver: m.giver, steps: m.steps.map(st => st.any ? st.any.map(c => [c.name, c.at]) : [st.text, st.at]) })), active: MS && { id: MS.m.id, step: MS.step, t: MS.t, seen: [...MS.seen] }, save: missionSave }; },
   startMission(id) { startMission(MISSIONS.find(m => m.id === id)); }, tick(dt = 1 / 60) { missionTick(dt); },
+  async hornTest(type, dur = .8) { // render the horn offline: returns samples for checking / saving
+    const real = actx, ctx = new OfflineAudioContext(1, Math.ceil(44100 * (dur + .3)), 44100); actx = ctx; const k = keys.KeyH;
+    try { if (type === 'bike') bikeBell(); else { keys.KeyH = true; hornStart(type); const v = hornV; hornV = null; const t = dur; v.out.gain.setValueAtTime(v.vol, t); v.out.gain.linearRampToValueAtTime(0, t + .06); for (const o of v.oscs) o.stop(t + .1); } } finally { actx = real; keys.KeyH = k; }
+    const buf = await ctx.startRendering(); return Array.from(buf.getChannelData(0)); },
   get survey() { return SURVEY; }, eggs() { return [...EGGS]; }, action() { const a = actionInfo(); return a && a.label; }, doAction, get peds() { return peds; }, get dog() { return dog; }, get freshman() { return freshman; }, bubbles() { return bubbles.map(b => b.el.textContent); },
   setNight(v) { isNight = v; applyTime(); }, setTime(m) { gameMin = m; }, life(dt = 1 / 60) { lifeTick(dt, true); return { key: lifeKey, crowd: crowd.filter(c => c.g.visible).map(c => c.kind), seated: lifeMesh ? lifeMesh.geometry.index.count / 36 / 15 : 0, sch: schedule() }; }, step(n) { for (let i = 0; i < n; i++) { updatePeds(1 / 60); updateDog(1 / 60); passingRemarks(1 / 60); ghostTick(1 / 60); updateZone(1 / 60); } }, get lots() { return LOTS.map(l => [l.id, l.stalls.length]); },
   roomAt(I, x, z, k) { const G = I.plan.grids ? I.plan.grids[Math.min(k, I.plan.grids.length - 1)] : k === 0 ? I.plan.gr : I.plan.up; const c = gI(G, ...gUV(G, x, z)); return c < 0 ? -2 : G.room[c]; },
