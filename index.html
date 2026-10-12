@@ -583,14 +583,14 @@ function rampY(x, z) {
 
 /* ---------- building looks (Street View survey) ---------- */
 const LOOK = {
-  '行政大樓': { c: 'A', en: 'Administration Building', wall: '#A8664A', accent: '#C9C6BF', kind: 'punch', arcade: true },
-  '電機資訊學院': { c: 'B', en: 'College of EECS', wall: '#D98C72', accent: '#7A3B2E', kind: 'unit', frame: '#EFE5DA', plinth: '#7A3B2E', pilaster: '#A9533F', hood: '#9EA3A6', portal: 'yellow' },
-  '管理學院': { c: 'C', en: 'College of Management', wall: '#B5583C', accent: '#8E918F', kind: 'unit', frame: '#8E918F', brick: true, topBand: '#8C8A85' },
-  '外語學院': { c: 'D', en: 'College of Foreign Languages', wall: '#E2A06C', accent: '#EDE6DA', kind: 'unit', frame: '#EDE6DA', portal: 'portico' },
+  '行政大樓': { c: 'A', en: 'Administration Building', wall: '#A8664A', accent: '#C9C6BF', kind: 'punch', arcade: true, base: 1.2, grand: { w: 20, land: 0 } },
+  '電機資訊學院': { c: 'B', en: 'College of EECS', wall: '#D98C72', accent: '#7A3B2E', kind: 'unit', frame: '#EFE5DA', plinth: '#7A3B2E', pilaster: '#A9533F', hood: '#9EA3A6', portal: 'yellow', base: 1.0, grand: { w: 16, land: 5.6 } },
+  '管理學院': { c: 'C', en: 'College of Management', wall: '#B5583C', accent: '#8E918F', kind: 'unit', frame: '#8E918F', brick: true, topBand: '#8C8A85', base: 1.0, grand: { w: 12, land: 2 } },
+  '外語學院': { c: 'D', en: 'College of Foreign Languages', wall: '#E2A06C', accent: '#EDE6DA', kind: 'unit', frame: '#EDE6DA', portal: 'portico', base: 1.35, grand: { w: 21, land: 6.5 }, colonnade: { d: 4 } },
   '外語學院 圓形附屬量體': { en: 'Round Hall', wall: '#C2242E', accent: '#C2242E', kind: 'ring', frame: '#F1EEE8', floors: 2, h: 9, noSign: true },
   '財金學院': { c: 'E', en: 'College of Finance', wall: '#B3B6B8', accent: '#C7754A', kind: 'visor', frame: '#D6D8D8' },
-  '工學院': { c: 'F', en: 'College of Engineering', wall: '#E7A588', accent: '#F0E4D8', kind: 'unit', frame: '#F0E4D8', sill: true },
-  '圖書資訊大樓': { c: 'J', en: 'Library & Information Building', wall: '#D9937A', accent: '#4E8C8A', kind: 'band', terrace: { t0: -8, t1: 8, depth: 7.5, spiral: 1 } },
+  '工學院': { c: 'F', en: 'College of Engineering', wall: '#E7A588', accent: '#F0E4D8', kind: 'unit', frame: '#F0E4D8', sill: true, base: .9, grand: { w: 8, land: 0 }, colonnade: { d: 3.5 } },
+  '圖書資訊大樓': { c: 'J', en: 'Library & Information Building', wall: '#D9937A', accent: '#4E8C8A', kind: 'band', rotunda: { R: 9.6, r0: 5, r1: 7.3 } },
   '學生活動中心': { c: 'K', en: 'Student Activity Center', wall: '#B8603F', accent: '#D9D2C4', kind: 'unit', frame: '#D9D2C4', sill: true },
   '教師研究大樓(OSM名:教學研究大樓)': { c: 'R', name: '教學研究大樓', en: 'Teaching & Research Building', wall: '#B85C3E', accent: '#6E2A2A', kind: 'grille', frame: '#3A3533', plinth: '#6E2A2A' },
   '創業園區・招待所': { en: 'Incubator & Guest House', wall: '#C9B8A6', accent: '#9A8F84', kind: 'unit', frame: '#E8E2DA', floors: 3, h: 11 },
@@ -795,9 +795,9 @@ function gapsOn(gap, i, a, b, L) {
   out.sort((p, q) => p.t0 - q.t0); for (let k = 1; k < out.length; k++) if (out[k].t0 < out[k - 1].t1 + .3 && (out[k].bot || 0) === (out[k - 1].bot || 0)) out.splice(k--, 1);
   return out;
 }
-function insetPoly(pts, d) {
-  const n = pts.length, sgn = polyArea(pts) > 0 ? 1 : -1, lines = [];
-  for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; let tx = b[0] - a[0], tz = b[1] - a[1]; const L = Math.hypot(tx, tz) || 1; tx /= L; tz /= L; const nx = -tz * sgn, nz = tx * sgn; lines.push([a[0] - nx * d, a[1] - nz * d, tx, tz]); }
+function insetPoly(pts, d) { // d: metres, or a function of the edge index (0 = leave that edge where it is)
+  const n = pts.length, sgn = polyArea(pts) > 0 ? 1 : -1, lines = [], D = typeof d === 'function' ? d : () => d;
+  for (let i = 0; i < n; i++) { const a = pts[i], b = pts[(i + 1) % n]; let tx = b[0] - a[0], tz = b[1] - a[1]; const L = Math.hypot(tx, tz) || 1; tx /= L; tz /= L; const nx = -tz * sgn, nz = tx * sgn; lines.push([a[0] - nx * D(i), a[1] - nz * D(i), tx, tz]); }
   return lines.map((l, i) => { const m = lines[(i + n - 1) % n]; const det = m[2] * -l[3] + l[2] * m[3]; if (Math.abs(det) < 1e-6) return [l[0], l[1]]; const t = ((l[0] - m[0]) * -l[3] + l[2] * (l[1] - m[1])) / det; return [m[0] + m[2] * t, m[1] + m[3] * t]; });
 }
 
@@ -865,21 +865,24 @@ function buildBuilding(b) {
   let doors = spec ? spec.map(([i, t]) => mkDoor(i, t)).filter(Boolean) : [];
   if (!doors.length && E) doors = [E];
   E = doors[0];
+  // 騎樓 / colonnade (Street View): the ground-floor wall on the entrance side stands back behind a row of columns
+  if (L.colonnade && E) corePts = insetPoly(pts, i => i === E.i ? L.colonnade.d : 0);
   const info = { name, code: L.c, pts, h, entrance: E, doors, look: L, plan: PD };
   BUILT.push(info);
   buildShell(info, b, L, mat, floors, fh, corePts, uOff);
   if (L.terrace) buildTerrace(info, L.terrace);
+  if (L.rotunda) buildRotunda(info, L.rotunda);
   if (E && !L.noSign) {
     const setback = L.arcade ? 3 : 0;
     const g = new THREE.Group(); g.position.set(E.x - E.nx * setback, 0, E.z - E.nz * setback); g.rotation.y = Math.atan2(E.nx, E.nz); scene.add(g);
     const small = h < 9;
-    for (const sx of [-1, 1]) box(DOOR.w / 2 - .1, DOOR.h - .1, .05, matGlassDark, sx * (DOOR.w / 2 + DOOR.w / 4 + .05), DOOR.h / 2, .02, g, false); // glass side lights beside the doorway
-    if (!L.arcade && !small && !L.portal && !L.terrace && !onCarRoad(E.x + E.nx * 3.9, E.z + E.nz * 3.9, .5)) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
-    if (!small) box(L.arcade ? 18 : 10, .03, L.arcade ? 3 : 2.4, matConcrete, 0, .015, (L.arcade ? 1.5 : 1.2), g, false); // flush landing (no step blocks to clip through)
+    const sb = info.doorBase || 0; for (const sx of [-1, 1]) box(DOOR.w / 2 - .1, DOOR.h - .1, .05, matGlassDark, sx * (DOOR.w / 2 + DOOR.w / 4 + .05), sb + DOOR.h / 2, .02 - (info.colSet || 0), g, false); // glass side lights beside the doorway
+    if (!L.arcade && !small && !L.portal && !L.terrace && !L.rotunda && !L.grand && !onCarRoad(E.x + E.nx * 3.9, E.z + E.nz * 3.9, .5)) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
+    if (!small && !L.base) box(L.arcade ? 18 : 10, .03, L.arcade ? 3 : 2.4, matConcrete, 0, .015, (L.arcade ? 1.5 : 1.2), g, false); // flush landing (no step blocks to clip through)
     const signW = Math.min(small ? 6 : 14, E.len * .5);
     const st = textTex([name, L.en + (L.c ? ` · ${L.c}` : '')], { w: 1024, h: 200, bg: '#22313b', fg: '#f6f1e7', sizes: [name.length > 9 ? 64 : 86, 34] });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(signW, signW * 200 / 1024), new THREE.MeshStandardMaterial({ map: st, roughness: .6 }));
-    sign.position.set(0, L.arcade ? 10.4 : small ? 3.2 : L.terrace ? info.levels[1] + DOOR.h + 1.3 : 5.4, L.arcade ? setback + .1 : .12); g.add(sign);
+    sign.position.set(0, L.arcade ? 10.4 : small ? 3.2 : (L.terrace || L.rotunda) ? info.levels[1] + DOOR.h + 1.3 : 5.4 + (L.base || 0), L.arcade ? setback + .1 : .12); g.add(sign);
     if (L.c) {
       const lt = canvasTex(256, 256, (cg) => { cg.font = `600 250px Teko, ${FONT}`; cg.textAlign = 'center'; cg.textBaseline = 'middle'; cg.lineWidth = 10; cg.strokeStyle = 'rgba(30,30,30,.7)'; cg.strokeText(L.c, 128, 150); cg.fillStyle = '#f7f3ea'; cg.fillText(L.c, 128, 150); });
       const lm = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), new THREE.MeshStandardMaterial({ map: lt, transparent: true, alphaTest: .1 }));
@@ -953,6 +956,58 @@ function buildTerrace(info, T) {
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .44), new THREE.MeshStandardMaterial({ map: st, side: THREE.DoubleSide })); sg.position.set(px, 2.3, pz); sg.rotation.y = Math.atan2(dx, dz); scene.add(sg);
     DECKS[DECKS.length - 1].entry = [ex, ez]; }
   zone('圖書館旋轉樓梯', '圖書資訊大樓 二樓入口', { minX: cx - 4, maxX: cx + 4, minZ: cz - 4, maxZ: cz + 4 }, '旋轉樓梯', 3);
+}
+/* steps from a raised ground floor: a landing at floor level, then risers of ≤16 cm on 30 cm treads */
+function buildSteps(x, z, nx, nz, cfg, H, main) {
+  const tx = -nz, tz = nx, n = Math.max(2, Math.round(H / .16)), rise = H / n, tread = .3, w = cfg.w, land = cfg.land || 0, len = land + (n - 1) * tread;
+  const P = (t, v) => [x + tx * t + nx * v, z + tz * t + nz * v], rot = Math.atan2(nx, nz);
+  const box_ = (t, v, y, bw, bh, bd, mat) => { const [bx, bz] = P(t, v); const m = box(bw, bh, bd, mat, bx, y, bz); m.rotation.y = rot; return m; };
+  const stone = M(0xffffff, { map: concreteTex, color: main ? 0xcfc9bd : 0xbdb8ae, roughness: .9 }), nose = M(0x6f6b64, { roughness: .8 });
+  if (land > .05) box_(0, land / 2, H / 2, w, H, land, stone).receiveShadow = true;
+  for (let k = 0; k < n - 1; k++) { const h = H - (k + 1) * rise, v = land + (k + .5) * tread; box_(0, v, h / 2, w, h, tread + .01, stone).receiveShadow = true; box_(0, land + k * tread + .03, h - .01, w, .02, .06, nose); }
+  // cheek walls with a granite coping on both sides
+  for (const sg of [-1, 1]) { box_(sg * (w / 2 + .15), len / 2, (H + .2) / 2, .3, H + .2, len + .02, M(0x8f8b84, { map: concreteTex })); const A = P(sg * (w / 2 + .15), -.05), B = P(sg * (w / 2 + .15), len); addWall(A[0], A[1], B[0], B[1], -1, H - .25, false, .15); }
+  if (main && w > 6) for (const sg of [-1, 1]) { const t0 = sg * (w / 2 - .6); for (let v = land + .2; v < len; v += .9) { const h = H - (Math.floor((v - land) / tread) + 1) * rise; box_(t0, v, h + .45, .05, .9, .05, matSteel); } const a = P(t0, land), b = P(t0, len); const r = cyl(.03, .03, Math.hypot(len - land, H), matSteel, (a[0] + b[0]) / 2, H / 2 + .9, (a[1] + b[1]) / 2, scene, 6); r.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(b[0] - a[0], -H, b[1] - a[1]).normalize()); }
+  { const A = P(-w / 2 - .3, len + .15), B = P(w / 2 + .3, len + .15); addWall(A[0], A[1], B[0], B[1], -99, 99, true, .3); } // vehicles don't climb steps
+  DECKS.push({ flight: true, ox: x, oz: z, T: [tx, tz], V: [nx, nz], w, land, H, n, rise, tread, box: bboxOf([P(-w / 2, 0), P(w / 2, 0), P(w / 2, len), P(-w / 2, len)]) });
+  pavedPolys.push([P(-w / 2 - .4, 0), P(w / 2 + .4, 0), P(w / 2 + .4, len + .6), P(-w / 2 - .4, len + .6)]);
+}
+/* 圖書資訊大樓 NE corner (Street View 2018, inside the rotunda): a two-storey open rotunda ringed by salmon pillars; a
+   curved stair winds up along the inside of the ring to a curved 2F walkway in front of the library door; the
+   國際會議廳 door is underneath on the ground floor. */
+function buildRotunda(info, R) {
+  const E = info.entrance, H = info.levels[1], H2 = info.levels[2] || H * 2, tx = -E.nz, tz = E.nx, nx = E.nx, nz = E.nz;
+  const pol = (r, deg) => { const a = deg * Math.PI / 180; return [E.x + (tx * Math.cos(a) + nx * Math.sin(a)) * r, E.z + (tz * Math.cos(a) + nz * Math.sin(a)) * r]; };
+  const colM = M(0xd9937a, { roughness: .7 }), conc = M(0xffffff, { map: concreteTex, color: 0xe2ddd3 }), glassM = M(0x9fc4cf, { transparent: true, opacity: .35, roughness: .1, metalness: .2 }), railM = M(0x9aa3a8, { metalness: .6, roughness: .35 });
+  const slab = (poly, y, th, mat) => { const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: th, bevelEnabled: false }).rotateX(-Math.PI / 2), mat); m.position.y = y - th; m.castShadow = m.receiveShadow = true; scene.add(m); blockers.push(m); return m; };
+  // pillars, ring beam and roof
+  const nP = 9; for (let k = 0; k < nP; k++) { const [x, z] = pol(R.R, 8 + 164 * k / (nP - 1)); cyl(.45, .45, H2, colM, x, H2 / 2, z, scene, 16); addCircle(x, z, .5, -99, H2); }
+  const roof = []; for (let a = 0; a <= 180; a += 10) roof.push(pol(R.R + .4, a)); slab(roof, H2 + .45, .5, conc);
+  // the curved 2F walkway: half disc out to r0, plus the strip where the stair arrives
+  const a0 = 165, sweep = 150, n = 26, top = a0 - sweep;
+  const walk = []; for (let a = 180; a >= top; a -= 5) walk.push(pol(R.r0, a)); walk.push(pol(R.r1, top), pol(R.r1, 0));
+  slab(walk, H, .4, conc); DECKS.push({ poly: walk, y: H, box: bboxOf(walk) });
+  // the stair
+  const h = a => clamp((Math.floor((a0 - a) / sweep * n) + 1) * H / n, 0, H);
+  const steps = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), conc, n), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), rm = (R.r0 + R.r1) / 2, d = sweep / n;
+  for (let k = 0; k < n; k++) { const am = a0 - (k + .5) * d, [x, z] = pol(rm, am), [ox, oz] = pol(1, am), yt = (k + 1) * H / n, th = Math.min(yt, .55); e.set(0, Math.atan2(ox - E.x, oz - E.z), 0); q.setFromEuler(e); m4.compose(new THREE.Vector3(x, yt - th / 2, z), q, new THREE.Vector3(rm * d * Math.PI / 180 * 1.12, th, R.r1 - R.r0)); steps.setMatrixAt(k, m4); }
+  steps.castShadow = steps.receiveShadow = true; scene.add(steps);
+  DECKS.push({ arc: true, cx: E.x, cz: E.z, r0: R.r0, r1: R.r1, T: [tx, tz], V: [nx, nz], a0, sweep, n, H, box: bboxOf([pol(R.r1, 0), pol(R.r1, 90), pol(R.r1, 180), pol(R.r1, 45), pol(R.r1, 135)], 1) });
+  // glass balustrades + collision: walkway edge, stair outer and inner edges (people can still walk underneath the high part)
+  const edge = (r, a1, a2, yAt, yMin, yMax) => { for (let a = a1; a > a2; a -= 5) { const b = Math.max(a2, a - 5), A = pol(r, a), B = pol(r, b), yb = yAt((a + b) / 2), L = Math.hypot(B[0] - A[0], B[1] - A[1]); const gl = box(.03, 1, L, glassM, (A[0] + B[0]) / 2, yb + .55, (A[1] + B[1]) / 2, scene, false); gl.rotation.y = Math.atan2(B[0] - A[0], B[1] - A[1]); const tr = box(.06, .05, L, railM, (A[0] + B[0]) / 2, yb + 1.07, (A[1] + B[1]) / 2, scene, false); tr.rotation.y = gl.rotation.y; addWall(A[0], A[1], B[0], B[1], yMin(yb), yMax(yb), false, .12); } };
+  edge(R.r0, 180, 40, () => H, () => H - .4, () => H + 2.2); // walkway
+  edge(R.r1, a0 - 12, top, h, () => .3, y => y + 2.2); // stair outside
+  edge(R.r0, a0, 40, h, () => .3, () => H - .5); // stair inside (open where it meets the walkway)
+  { const A = pol(R.r1, top), B = pol(R.r1, 0); addWall(A[0], A[1], B[0], B[1], H - .4, H + 2.2, false, .12); }
+  for (const r of [R.r0, R.r1]) for (let a = a0 - 12; a > a0 - sweep * 2 / H; a -= 5) { const A = pol(r, a), B = pol(r, a - 5); addWall(A[0], A[1], B[0], B[1], -1, .3, false, .12); } // can't walk in under the low part
+  const entry = pol(rm, a0 + 9); DECKS[DECKS.length - 1].entry = entry;
+  { const [px, pz] = pol(R.r1 + .9, a0 + 6); cyl(.05, .05, 2.4, matSteel, px, 1.2, pz, scene, 6); addCircle(px, pz, .1); const st = textTex(['↑ 2F 圖書館入口', 'Library Entrance'], { w: 512, h: 160, bg: '#22313b', fg: '#f6f1e7', sizes: [56, 28] }); const sg = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .44), new THREE.MeshStandardMaterial({ map: st, side: THREE.DoubleSide })); sg.position.set(px, 2.3, pz); sg.rotation.y = Math.atan2(tx, tz); scene.add(sg); }
+  // the library's own door on 2F
+  const fr = M(0x3a3f44, { metalness: .5, roughness: .4 }), at = (t, v, y, w, hh, dd, mat) => { const m = box(w, hh, dd, mat, E.x + tx * t + nx * v, y, E.z + tz * t + nz * v); m.rotation.y = Math.atan2(nx, nz); return m; };
+  for (const sx of [-1.66, 1.66]) at(sx, -.05, H + (DOOR.h + .3) / 2, .14, DOOR.h + .3, .4, fr);
+  at(0, -.05, H + DOOR.h + .25, 3.4, .14, .4, fr); for (const sx of [-.8, .8]) at(sx, -.12, H + DOOR.h / 2, 1.5, DOOR.h, .04, glassM);
+  const plaza = []; for (let a = 0; a <= 180; a += 15) plaza.push(pol(R.R + 1.5, a)); shapeMesh(plaza, M(0xffffff, { map: grayPaverTex }), .03, 4); pavedPolys.push(plaza);
+  zone('圖書館旋轉樓梯', '圖書資訊大樓 東北角圓廳', bboxOf(plaza), '圓廳旋轉梯', 3);
 }
 function buildSpecials() {
   const by = n => BUILT.find(b => b.name.startsWith(n));
@@ -1353,7 +1408,7 @@ function buildInterior(info, L, levels, pts, inner, innerCore, arcade, gx, gz) {
   const put = (kind, x, y, z, ry, sx, sy, sz, rx = 0) => ((INSTF[IFLOOR] ||= {})[kind] ||= []).push([x, y, z, ry, sx, sy, sz, rx]);
   // floor slabs, with stairwell holes above the ground floor
   for (let k = 0; k < levels.length; k++) {
-    const y = k ? levels[k] : .06, P = k === 0 && arcade ? pts : inner;
+    const y = k ? levels[k] : levels[0] + .06, P = k === 0 && arcade ? pts : inner;
     const shape = new THREE.Shape(P.map(([x, z]) => new THREE.Vector2(x, -z)));
     if (k) for (const c of I.cores) { const q = (a, b) => [c.ox + c.A[0] * a + c.B[0] * b, c.oz + c.A[1] * a + c.B[1] * b]; shape.holes.push(new THREE.Path([q(c.LAND, -c.W / 2), q(c.CL, -c.W / 2), q(c.CL, c.W / 2), q(c.LAND, c.W / 2)].map(([x, z]) => new THREE.Vector2(x, -z)))); }
     const geo = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2); const uv = geo.attributes.uv, ps = geo.attributes.position; for (let i = 0; i < uv.count; i++) uv.setXY(i, ps.getX(i) / 4, ps.getZ(i) / 4);
@@ -1693,8 +1748,14 @@ function deckY(x, z, y, g) {
   for (const D of DECKS) {
     if (!inBox(x, z, D.box)) continue;
     if (D.poly) { if (D.y <= lim && D.y > best && inPoly(x, z, D.poly)) best = D.y; continue; }
+    if (D.flight) { // straight flight of steps (with a landing at the top) running out from a door
+      const dx = x - D.ox, dz = z - D.oz, t = dx * D.T[0] + dz * D.T[1], v = dx * D.V[0] + dz * D.V[1]; if (Math.abs(t) > D.w / 2 || v < -.05) continue;
+      let h; if (v < D.land) h = D.H; else { const k = Math.floor((v - D.land) / D.tread); if (k > D.n - 2) continue; h = D.H - (k + 1) * D.rise; }
+      if (h <= lim && h > best) best = h; continue;
+    }
     const dx = x - D.cx, dz = z - D.cz, r = Math.hypot(dx, dz); if (r < D.r0 || r > D.r1) continue;
     const phi = Math.atan2(dx * D.V[0] + dz * D.V[1], dx * D.T[0] + dz * D.T[1]) * 180 / Math.PI; // angle in the terrace frame
+    if (D.arc && (phi > D.a0 || phi < D.a0 - D.sweep)) continue; // curved stair: only along its own arc
     let h; if (phi > D.a0) h = D.H; else { const f = (D.a0 - phi) / D.sweep; h = Math.min(D.H, (Math.floor(f * D.n) + 1) * D.H / D.n); }
     if (h <= lim && h > best) best = h;
   }
@@ -1704,19 +1765,21 @@ function deckY(x, z, y, g) {
    centre column or the rail; small pull toward the middle of the treads */
 function spiralGuide(x, z, y, mx, mz) {
   for (const D of DECKS) {
-    if (D.poly || !inBox(x, z, D.box)) continue;
+    if (D.poly || D.flight || !inBox(x, z, D.box)) continue;
     const dx = x - D.cx, dz = z - D.cz, r = Math.hypot(dx, dz); if (r < D.r0 - .2 || r > D.r1 + .15) continue;
-    let phi = Math.atan2(dx * D.V[0] + dz * D.V[1], dx * D.T[0] + dz * D.T[1]) * 180 / Math.PI; if (phi > D.a0 + 3) phi -= 360;
+    let phi = Math.atan2(dx * D.V[0] + dz * D.V[1], dx * D.T[0] + dz * D.T[1]) * 180 / Math.PI; if (phi > D.a0 + (D.arc ? 14 : 3)) phi -= 360; // a curved stair also catches you a step before its foot
     if (phi < D.a0 - D.sweep - 3) { player.spDir = 0; continue; } // on the landing: walk freely
     const h = Math.min(D.H, Math.max(0, (D.a0 - phi) / D.sweep * D.H)); if (Math.abs(y - h) > 1.2) continue; // underneath, or far above
     const a = phi * Math.PI / 180, ux = (dx / r), uz = (dz / r); // radial
     const upx = Math.sin(a) * D.T[0] - Math.cos(a) * D.V[0], upz = Math.sin(a) * D.T[1] - Math.cos(a) * D.V[1]; // direction of decreasing angle = up
-    const dot = mx * upx + mz * upz, sg = Math.abs(dot) >= .35 ? Math.sign(dot) : (player.spDir || (y > D.H / 2 ? -1 : 1)); player.spDir = sg; // pushing straight into the stair: carry on, or head for the other end
+    const dot = mx * upx + mz * upz, sg = Math.abs(dot) >= .35 ? Math.sign(dot) : y < .25 ? 1 : (player.spDir || (y > D.H / 2 ? -1 : 1)); player.spDir = sg; // pushing straight into the stair: carry on, or head for the other end
     const pull = clamp(((D.r0 + D.r1) / 2 - r) * .6, -.5, .5);
     let gx = upx * sg + ux * pull, gz = upz * sg + uz * pull; const gl = Math.hypot(gx, gz); return [gx / gl, gz / gl];
   }
   player.spDir = 0; return null;
 }
+/* where a person put down at (x, z) stands: the ground, or a raised floor / landing up to 1.5 m above it (not a 2F walkway) */
+const standY = (x, z) => { const g = groundY(x, z); return DECKS.length ? deckY(x, z, g + .9, g) : g; };
 function surfaceY(x, z, y) {
   const g = DECKS.length ? deckY(x, z, y, groundY(x, z)) : groundY(x, z), I = interiorAt(x, z); if (!I) return g;
   const lim = y + .6, lv = I.levels; let best = g;
@@ -1732,7 +1795,7 @@ function surfaceY(x, z, y) {
     }
     return best;
   }
-  for (let k = 1; k < lv.length; k++) if (lv[k] <= lim && lv[k] > best) best = lv[k];
+  for (let k = 0; k < lv.length; k++) if (lv[k] <= lim && lv[k] > best) best = lv[k];
   return best;
 }
 function updateInteriorVis() {
@@ -1752,38 +1815,62 @@ function buildShell(info, b, L, mat, floors, fh, corePts, uOff) {
   const levels = arcade ? [0, 4.6, 9.4] : [0];
   if (arcade) { const u = (h - 9.4) / Math.max(1, floors - 2); for (let k = 3; k < floors; k++) levels.push(9.4 + u * (k - 2)); }
   else for (let k = 1; k < floors; k++) levels.push(k * fh);
-  const doorPts = arcade ? corePts : pts, setback = arcade ? 3 : 0;
-  const gx = E.x - E.nx * setback, gz = E.z - E.nz * setback;
-  const doors = (info.doors || [E]).map(d => ({ ...d, gx: d.x - d.nx * setback, gz: d.z - d.nz * setback }));
-  const gap = doors.map(d => ({ i: d.i, x: d.gx, z: d.gz, w: DOOR.w, top: DOOR.h, lintel: DOOR.h - 1.0 }));
+  const base = L.base || 0, colo = !!L.colonnade && corePts !== pts; // raised ground floor (steps at every door) / front colonnade
+  if (base) for (let k = 0; k < levels.length; k++) levels[k] += base;
+  info.doorBase = base; info.colSet = colo ? L.colonnade.d : 0;
+  const doorPts = arcade || colo ? corePts : pts, setback = arcade ? 3 : 0, sb = d => arcade ? 3 : colo && d.i === E.i ? L.colonnade.d : 0;
+  const gx = E.x - E.nx * sb(E), gz = E.z - E.nz * sb(E);
+  const doors = (info.doors || [E]).map(d => ({ ...d, gx: d.x - d.nx * sb(d), gz: d.z - d.nz * sb(d) }));
+  const gap = doors.map(d => ({ i: d.i, x: d.gx, z: d.gz, w: DOOR.w, top: base + DOOR.h, lintel: base + DOOR.h - 1.0, bot: base || undefined }));
   info.levels = levels;
-  if (L.terrace) gap.push({ i: E.i, x: E.x, z: E.z, w: 3.2, bot: levels[1], top: levels[1] + DOOR.h + .3, lintel: levels[1] + DOOR.h - .8 }); // main door one floor up, onto the terrace
-  const inner = insetPoly(pts, .25), innerCore = arcade ? insetPoly(corePts, .25) : inner;
+  if (L.terrace || L.rotunda) gap.push({ i: E.i, x: E.x, z: E.z, w: 3.2, bot: levels[1], top: levels[1] + DOOR.h + .3, lintel: levels[1] + DOOR.h - .8 }); // main door one floor up, onto the terrace
+  const inner = insetPoly(pts, .25), innerCore = arcade || (L.colonnade && corePts !== pts) ? insetPoly(corePts, .25) : inner;
   // outer skin and inner skin (facade texture inside too, so the windows read from the rooms)
   if (arcade) {
-    blockers.push(wallRing(corePts, 0, 4.6, matGlassDark, 4.6, 0, 0, gap));
-    blockers.push(wallRing(innerCore, 0, 4.6, matGlassDark, 4.6, 0, 0, gap, true));
-    blockers.push(wallRing(inner, 4.6, h, mat, fh, uOff, 0, null, true));
-    ringWalls(corePts, -99, 4.3, gap); ringWalls(pts, 2.2, h + 1, null);
+    blockers.push(wallRing(corePts, 0, levels[1], matGlassDark, 4.6, 0, 0, gap));
+    blockers.push(wallRing(innerCore, 0, levels[1], matGlassDark, 4.6, 0, 0, gap, true));
+    blockers.push(wallRing(inner, levels[1], h, mat, fh, uOff, 0, null, true));
+    ringWalls(corePts, -99, levels[1] - .3, gap); ringWalls(pts, base + 2.2, h + 1, null);
+  } else if (colo) {
+    // ground floor behind the colonnade; full outline above it
+    blockers.push(wallRing(corePts, 0, levels[1], mat, fh, uOff, 0, gap));
+    blockers.push(wallRing(innerCore, 0, levels[1], mat, fh, uOff, 0, gap, true));
+    blockers.push(wallRing(pts, levels[1], h, mat, fh, uOff, 0, null)); blockers.push(wallRing(inner, levels[1], h, mat, fh, uOff, 0, null, true));
+    ringWalls(corePts, -99, levels[1] - .3, gap); ringWalls(pts, levels[1] - .4, h + 1, null);
+    const ceil = shapeMesh(pts, M(0xe6e1d8, { map: concreteTex, side: THREE.DoubleSide }), levels[1] - .03, 6); ceil.castShadow = false;
+    const a = pts[E.i], b2 = pts[(E.i + 1) % pts.length], Ls = Math.hypot(b2[0] - a[0], b2[1] - a[1]), n = Math.max(2, Math.round(Ls / 6)), colM = M(0xb9b6ae, { map: concreteTex, roughness: .8 });
+    for (let k = 0; k <= n; k++) { const t = .6 / Ls + (1 - 1.2 / Ls) * k / n, x = lerp(a[0], b2[0], t) - E.nx * .55, z = lerp(a[1], b2[1], t) - E.nz * .55; cyl(.38, .38, levels[1], colM, x, levels[1] / 2, z, scene, 14); addCircle(x, z, .42, -99, levels[1]); }
   } else {
     blockers.push(wallRing(pts, 0, h, mat, fh, uOff, 0, gap));
     blockers.push(wallRing(inner, 0, h, mat, fh, uOff, 0, gap, true));
     if (L.plinth) wallRing(pts, 0, Math.min(fh, DOOR.h + .4), M(L.plinth, { map: concreteTex, roughness: .85 }), fh, 0, .06, gap);
     ringWalls(pts, -99, h + 1, gap);
   }
+  if (base) {
+    // stone plinth band, the raised floor (decked so you can stand on the colonnade / arcade) and its open edges walled
+    wallRing(pts, 0, base + .04, M(0x8f8b84, { map: concreteTex, roughness: .9 }), 1, 0, .04);
+    DECKS.push({ poly: pts, y: base, box: bboxOf(pts) });
+    if (arcade || colo) {
+      const steps = doors.map((d, k) => ({ i: d.i, x: d.x, z: d.z, w: (k === 0 && L.grand ? L.grand.w : DOOR.w + 1.6) + .2, top: 99, lintel: -99 }));
+      const open = arcade ? null : [E.i];
+      for (let i = 0; i < pts.length; i++) { if (open && !open.includes(i)) continue; const a = pts[i], b2 = pts[(i + 1) % pts.length], L2 = Math.hypot(b2[0] - a[0], b2[1] - a[1]); const dx = (b2[0] - a[0]) / L2, dz = (b2[1] - a[1]) / L2, at = t => [a[0] + dx * t, a[1] + dz * t];
+        for (const [ta, tb, cov] of gapSpans(gapsOn(steps, i, a, b2, L2), L2)) if (!cov.length && tb - ta > .05) { const A = at(ta), B = at(tb); addWall(A[0], A[1], B[0], B[1], -99, base - .3); } }
+    }
+    doors.forEach((d, k) => buildSteps(d.x, d.z, d.nx, d.nz, k === 0 && L.grand ? { ...L.grand, w: Math.min(L.grand.w, d.len - 1) } : { w: DOOR.w + 1.6, land: 1.1 }, base, k === 0)); // doors[0] is the main entrance
+  }
   // every doorway: jambs + head between the two skins; side entrances also get a small canopy and a paved doorstep
   const fr = M(0x3a3f44, { metalness: .5, roughness: .4 });
   doors.forEach((d, k) => {
-    const g = new THREE.Group(); g.position.set(d.gx, 0, d.gz); g.rotation.y = Math.atan2(d.nx, d.nz); scene.add(g);
+    const g = new THREE.Group(); g.position.set(d.gx, base, d.gz); g.rotation.y = Math.atan2(d.nx, d.nz); scene.add(g);
     for (const sx of [-1, 1]) box(.12, DOOR.h, .4, fr, sx * (DOOR.w / 2 - .06), DOOR.h / 2, -.15, g, false);
     box(DOOR.w, .14, .4, fr, 0, DOOR.h - .07, -.15, g, false);
     box(DOOR.w, .02, .45, matConcrete, 0, .01, -.15, g, false);
     if (k > 0 && !arcade) { box(DOOR.w + 1.4, .16, 1.8, matConcrete, 0, DOOR.h + .35, .9 + setback, g); for (const sx of [-1, 1]) box(.24, .7, .5, fr, sx * (DOOR.w / 2 + .45), DOOR.h + .3, .25, g, false); for (const sx of [-1, 1]) box(.7, 1.3, .06, matGlassDark, sx * (DOOR.w / 2 + .38), DOOR.h / 2 + .5, .03, g, false); }
     const tx = -d.nz, tz = d.nx, P = (a, o) => [d.x + tx * a + d.nx * o, d.z + tz * a + d.nz * o];
-    const pad = [P(-2, .05), P(2, .05), P(2, 4.2), P(-2, 4.2)]; shapeMesh(pad, matGrayPaver, .035, 4); pavedPolys.push(pad);
+    const pad = [P(-2, .05), P(2, .05), P(2, 4.2), P(-2, 4.2)]; if (!base) shapeMesh(pad, matGrayPaver, .035, 4); pavedPolys.push(pad);
   });
   info.doorsIn = doors;
-  buildInterior(info, L, levels, pts, inner, innerCore, arcade, gx, gz);
+  buildInterior(info, L, levels, pts, inner, innerCore, arcade || colo, gx, gz);
 }
 
 /* ================= ground, roads, freeway, bridge ================= */
@@ -2329,7 +2416,7 @@ function buildFurniture() {
     for (const side of [1, -1]) { const x0 = E.x + E.nx * 4 + E.nz * side * 4.5, z0 = E.z + E.nz * 4 - E.nx * side * 4.5; if (occupied(x0, z0, .5)) continue; for (let k = 0; k < 3; k++) { const x = x0 + E.nz * side * k * .8, z = z0 - E.nx * side * k * .8; if (!occupied(x, z, .3)) BIKE_SPOTS.push([x, z, Math.atan2(E.nx, E.nz) + rr(-.1, .1)]); } break; } }
   // sculptures: red steel "number fence" in front of 外語學院, white leaf sculpture in front of 教學研究大樓
   { const b = byName('外語學院'); if (b && b.entrance) { const E = b.entrance; for (let k = 0; k < 14; k++) { const t = 14 + (k - 6.5) * .7, x = E.x + E.nx * 9 + E.nz * t, z = E.z + E.nz * 9 - E.nx * t; box(.08, rr(1.2, 2.6), .08, M(0xc8232c, { metalness: .4 }), x, .9, z); addCircle(x, z, .12); } } }
-  { const b = byName('教學研究大樓'); if (b && b.entrance) { const E = b.entrance; let k = 10; while (k > 4 && onCarRoad(E.x + E.nx * k, E.z + E.nz * k, 2)) k -= .5; const x = E.x + E.nx * k, z = E.z + E.nz * k; for (let k = 0; k < 5; k++) { const leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), M(0xf4f2ec, { roughness: .4 })); leaf.scale.set(.25, 2.2, 1); leaf.position.set(x, 2, z); leaf.rotation.set(rr(-.4, .4), k * 1.25, rr(-.5, .5)); leaf.castShadow = true; scene.add(leaf); } cyl(.8, .9, .4, matConcrete, x, .2, z); addCircle(x, z, 1.2); } }
+  { const b = byName('教學研究大樓'); if (b && b.entrance) { const E = b.entrance; let k = 10; while (k > 4 && onCarRoad(E.x + E.nx * k - E.nz * 5, E.z + E.nz * k + E.nx * 5, 2)) k -= .5; const x = E.x + E.nx * k - E.nz * 5, z = E.z + E.nz * k + E.nx * 5; for (let k = 0; k < 5; k++) { const leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), M(0xf4f2ec, { roughness: .4 })); leaf.scale.set(.25, 2.2, 1); leaf.position.set(x, 2, z); leaf.rotation.set(rr(-.4, .4), k * 1.25, rr(-.5, .5)); leaf.castShadow = true; scene.add(leaf); } cyl(.8, .9, .4, matConcrete, x, .2, z); addCircle(x, z, 1.2); } }
   // compass sculpture between the library and the student activity center (from a campus travel blog)
   { const J = byName('圖書資訊大樓'), K = byName('學生活動中心'); if (J && K) { const [jx, jz] = centroid(J.pts), [kx, kz] = centroid(K.pts); let best = null; for (let t = .3; t <= .7; t += .05) { const x = lerp(jx, kx, t), z = lerp(jz, kz, t); if (!occupied(x, z, 5)) { best = [x, z]; break; } } if (best) { const [x, z] = best; const cp = new THREE.Mesh(new THREE.CircleGeometry(6, 40).rotateX(-Math.PI / 2), matTile); cp.position.set(x, .035, z); scene.add(cp); const ringS = new THREE.Mesh(new THREE.TorusGeometry(2.2, .14, 10, 40), matSteel); ringS.position.set(x, 2.6, z); ringS.castShadow = true; scene.add(ringS); const r2 = ringS.clone(); r2.rotation.y = Math.PI / 2; scene.add(r2); const nd = box(.2, .2, 4.4, M(0xb4553f, { metalness: .4 }), x, 2.6, z); nd.rotation.x = .3; cyl(.4, .6, .8, matConcrete, x, .4, z); addCircle(x, z, .8); zone('羅盤', '圖書資訊大樓與學生活動中心之間', { minX: x - 7, maxX: x + 7, minZ: z - 7, maxZ: z + 7 }, '羅盤', 3); pavedPolys.push([[x - 6, z - 6], [x + 6, z - 6], [x + 6, z + 6], [x - 6, z + 6]]); } } }
 }
@@ -3081,7 +3168,7 @@ function onPress(code) {
   if (code === 'KeyL') { lightsOn = !lightsOn; toast(lightsOn ? '大燈 開' : '大燈 關'); }
   if (code === 'KeyH') horn();
   if (code === 'Tab') $('help').hidden = !$('help').hidden;
-  if (code === 'KeyR') { if (player.vehicle) exitVehicle(true); player.pos.set(SPAWN.x, groundY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw; camYaw = SPAWN.yaw + Math.PI; toast('回到行政大樓前'); }
+  if (code === 'KeyR') { if (player.vehicle) exitVehicle(true); player.pos.set(SPAWN.x, standY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw; camYaw = SPAWN.yaw + Math.PI; toast('回到行政大樓前'); }
   if (code === 'KeyC') camYaw = player.vehicle ? player.vehicle.heading + Math.PI : player.yaw + Math.PI;
 }
 const cvs = renderer.domElement;
@@ -3225,7 +3312,7 @@ function setupMissions() {
   const front = (b, d) => b && b.entrance ? [b.entrance.x + b.entrance.nx * d, b.entrance.z + b.entrance.nz * d] : null;
   const inside = (n, lv) => () => { const J = I(n), q = interiorAt(player.pos.x, player.pos.z); return !player.vehicle && J && q === J && player.pos.y >= J.levels[Math.min(lv, J.levels.length - 1)] - .3; };
   const lot = id => LOTS.find(L => L.id === id), ybA = YB_DOCKS.find(d => d.name === '財金學院') || YB_DOCKS[0], ybW = YB_DOCKS.find(d => d.name === '卓越路大門') || YB_DOCKS[YB_DOCKS.length - 1];
-  const spiral = DECKS.find(D => !D.poly), PZ = SURVEY.anchors['橋東圓形廣場中心（落橋處）'];
+  const spiral = DECKS.find(D => D.arc) || DECKS.find(D => D.cx !== undefined), PZ = SURVEY.anchors['橋東圓形廣場中心（落橋處）'];
   const add = m => { if (m.giver && m.steps.every(st => st.at || st.any)) MISSIONS.push(m); };
   add({ id: 'class', title: '第一節要點名', reward: 2, time: 150, giver: front(bld('行政大樓'), 8),
     intro: '鐘快響了！到管理學院三樓上課，教授會點名。', steps: [
@@ -3238,9 +3325,9 @@ function setupMissions() {
     intro: '室友在敬業樓餓到不行，幫他從活動中心學餐帶便當回宿舍。走路、騎車、開車都可以。', steps: [
       { text: '把便當送到敬業樓 A 門口', at: front(bld('敬業樓 A'), 3), r: 5 }] });
   add({ id: 'book', title: '圖書館還書', reward: 2, time: 75, giver: [PZ[0] - 6, PZ[1] + 6],
-    intro: '書今天到期！圖書館大門在二樓，從東北角的旋轉樓梯上去，走進二樓大門還書。', steps: [
-      ...(spiral ? [{ text: '走到圖書資訊大樓旋轉樓梯的入口（有指標）', at: spiral.entry, r: 3 }] : []),
-      { text: '爬上二樓平台，走進圖書館大門', at: front(bld('圖書資訊大樓'), 1), r: 2, check: inside('圖書資訊大樓', 1) }] });
+    intro: '書今天到期！圖書館大門在二樓：東北角圓廳裡有一道弧形旋轉樓梯，沿著柱廊繞上二樓走廊，走進大門還書。', steps: [
+      ...(spiral ? [{ text: '走到圖書資訊大樓東北角的圓廳，找旋轉樓梯入口（有指標）', at: spiral.entry, r: 3 }] : []),
+      { text: '沿弧形樓梯上二樓，走進圖書館大門', at: front(bld('圖書資訊大樓'), 1), r: 2, check: inside('圖書資訊大樓', 1) }] });
   add({ id: 'scooter', title: '機車移車', reward: 3, time: 220, giver: lot('M2') && [lot('M2').x, lot('M2').z],
     intro: '學長的機車停在西校區，幫他騎到東校區的機車停車場停好（停進車棚區、車子停穩）。', steps: [
       { text: '在西校區機車停車場騎一台機車', at: lot('M2') && [lot('M2').x, lot('M2').z], r: 25, check: () => player.vehicle && player.vehicle.type === 'scooter' },
@@ -3366,7 +3453,7 @@ function exitVehicle(force) {
   if (v.type !== 'car') { v.mesh.remove(player.g); scene.add(player.g); }
   player.g.visible = true;
   v.mesh.remove(headlight); v.mesh.remove(headlight.target); headlight.intensity = 0;
-  player.pos.set(ex, groundY(ex, ez), ez); player.yaw = v.heading; player.vehicle = null; player.vy = 0;
+  player.pos.set(ex, Math.max(standY(ex, ez), v.pos.y), ez); player.yaw = v.heading; player.vehicle = null; player.vy = 0;
   if (!force) v.braking = false;
   camDist = 4.6; $('speedo').hidden = true;
   if (eng) eng.g.gain.value = 0;
@@ -3708,7 +3795,7 @@ bigc.addEventListener('click', e => {
   let tx = x, tz = z;
   if (!inCampus(tx, tz)) { toast('請點選校園範圍內的位置'); return; }
   for (let i = 0; i < 40; i++) { const p = pushOut(tx, tz, 2.2, groundY(tx, tz)); if (Math.hypot(p.x, p.z) < .01) break; tx += p.x; tz += p.z; }
-  if (player.vehicle) { player.vehicle.pos.set(tx, groundY(tx, tz), tz); player.vehicle.speed = 0; syncVehicle(player.vehicle); } else player.pos.set(tx, groundY(tx, tz), tz);
+  if (player.vehicle) { player.vehicle.pos.set(tx, groundY(tx, tz), tz); player.vehicle.speed = 0; syncVehicle(player.vehicle); } else player.pos.set(tx, standY(tx, tz), tz);
   camPos.set(tx, 30, tz + 10); camTarget.set(tx, 2, tz);
   toggleMap(); toast(`傳送至 ${zoneAt(tx, tz)[0]}`);
 });
@@ -3763,7 +3850,7 @@ let freeCam = null;
 window.GTA = {
   view(px, py, pz, tx, ty, tz) { freeCam = [px, py, pz, tx, ty, tz]; },
   release() { freeCam = null; },
-  tp(x, z, yaw = 0) { if (player.vehicle) exitVehicle(true); player.pos.set(x, groundY(x, z), z); player.yaw = yaw; camYaw = yaw + Math.PI; camPos.set(x, groundY(x, z) + 3, z); camTarget.copy(player.pos); },
+  tp(x, z, yaw = 0) { if (player.vehicle) exitVehicle(true); player.pos.set(x, standY(x, z), z); player.yaw = yaw; camYaw = yaw + Math.PI; camPos.set(x, groundY(x, z) + 3, z); camTarget.copy(player.pos); },
   state() { const s = player.vehicle ? player.vehicle.pos : player.pos; return { x: +s.x.toFixed(1), y: +s.y.toFixed(2), z: +s.z.toFixed(1), zone: zoneAt(s.x, s.z)[0], vehicle: player.vehicle ? player.vehicle.type : null }; },
   get player() { return player; }, get vehicles() { return vehicles; }, groundY, pushOut,
   surfaceY, get interiors() { return INTERIORS; }, get built() { return BUILT; },
@@ -3805,7 +3892,7 @@ async function boot() {
   spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs(); setupMissions();
   const A = BUILT.find(b => b.name === '行政大樓'), E = A.entrance;
   SPAWN.x = E.x + E.nx * 14; SPAWN.z = E.z + E.nz * 14; SPAWN.yaw = Math.atan2(-E.nx, -E.nz);
-  player.pos.set(SPAWN.x, groundY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw;
+  player.pos.set(SPAWN.x, standY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw;
   player.g = makeHuman({ shirt: 0x1d1d1f, pants: 0x31456b, skin: 0xd9a77f, bag: 0x24324a, shoe: 0xf2f2ee }); scene.add(player.g);
   player.g.position.copy(player.pos);
   applyTime(); drawMapBase(); drawMini();
