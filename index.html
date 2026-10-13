@@ -588,10 +588,10 @@ const LOOK = {
   '管理學院': { c: 'C', en: 'College of Management', wall: '#B5583C', accent: '#8E918F', kind: 'unit', frame: '#8E918F', brick: true, topBand: '#8C8A85', base: 1.0, grand: { w: 12, land: 2 } },
   '外語學院': { c: 'D', en: 'College of Foreign Languages', wall: '#E2A06C', accent: '#EDE6DA', kind: 'unit', frame: '#EDE6DA', portal: 'portico', base: 1.35, grand: { w: 21, land: 6.5 }, colonnade: { d: 4 } },
   '外語學院 圓形附屬量體': { en: 'Round Hall', wall: '#C2242E', accent: '#C2242E', kind: 'ring', frame: '#F1EEE8', floors: 2, h: 9, noSign: true },
-  '財金學院': { c: 'E', en: 'College of Finance', wall: '#B3B6B8', accent: '#C7754A', kind: 'visor', frame: '#D6D8D8' },
+  '財金學院': { c: 'E', en: 'College of Finance', wall: '#B3B6B8', accent: '#C7754A', kind: 'visor', frame: '#D6D8D8', court: { poly: [[100.5, -198.1], [114.6, -157.8], [170.6, -177.3], [164.8, -190], [149, -183.5], [140, -208.7]], open: [[140, -208.7], [100.5, -198.1]], stair: 12 } },
   '工學院': { c: 'F', en: 'College of Engineering', wall: '#E7A588', accent: '#F0E4D8', kind: 'unit', frame: '#F0E4D8', sill: true, base: .9, grand: { w: 8, land: 0 }, colonnade: { d: 3.5 } },
   '圖書資訊大樓': { c: 'J', en: 'Library & Information Building', wall: '#D9937A', accent: '#4E8C8A', kind: 'band', rotunda: { R: 9.6, r0: 5, r1: 7.3 } },
-  '學生活動中心': { c: 'K', en: 'Student Activity Center', wall: '#B8603F', accent: '#D9D2C4', kind: 'unit', frame: '#D9D2C4', sill: true },
+  '學生活動中心': { c: 'K', en: 'Student Activity Center', wall: '#B8603F', accent: '#D9D2C4', kind: 'unit', frame: '#D9D2C4', sill: true, skybridge: { path: [[140, -18], [184, -28.8], [190, -13.9]], w: 3.2 } },
   '教師研究大樓(OSM名:教學研究大樓)': { c: 'R', name: '教學研究大樓', en: 'Teaching & Research Building', wall: '#B85C3E', accent: '#6E2A2A', kind: 'grille', frame: '#3A3533', plinth: '#6E2A2A' },
   '創業園區・招待所': { en: 'Incubator & Guest House', wall: '#C9B8A6', accent: '#9A8F84', kind: 'unit', frame: '#E8E2DA', floors: 3, h: 11 },
   '跨領域實作工廠': { en: 'Interdisciplinary Workshop', wall: '#E2D2B6', accent: '#B5AC9E', kind: 'unit', frame: '#F2EEE6', sill: true, floors: 2, h: 10 },
@@ -872,6 +872,8 @@ function buildBuilding(b) {
   buildShell(info, b, L, mat, floors, fh, corePts, uOff);
   if (L.terrace) buildTerrace(info, L.terrace);
   if (L.rotunda) buildRotunda(info, L.rotunda);
+  if (L.court) buildCourt(info, L.court);
+  if (L.skybridge) buildSkybridge(info, L.skybridge);
   if (E && !L.noSign) {
     const setback = L.arcade ? 3 : 0;
     const g = new THREE.Group(); g.position.set(E.x - E.nx * setback, 0, E.z - E.nz * setback); g.rotation.y = Math.atan2(E.nx, E.nz); scene.add(g);
@@ -1008,6 +1010,50 @@ function buildRotunda(info, R) {
   at(0, -.05, H + DOOR.h + .25, 3.4, .14, .4, fr); for (const sx of [-.8, .8]) at(sx, -.12, H + DOOR.h / 2, 1.5, DOOR.h, .04, glassM);
   const plaza = []; for (let a = 0; a <= 180; a += 15) plaza.push(pol(R.R + 1.5, a)); shapeMesh(plaza, M(0xffffff, { map: grayPaverTex }), .03, 4); pavedPolys.push(plaza);
   zone('圖書館旋轉樓梯', '圖書資訊大樓 東北角圓廳', bboxOf(plaza), '圓廳旋轉梯', 3);
+}
+/* 財金學院 (Street View 2018): the U between the wings is a podium courtyard one floor up, reached by a broad
+   double flight from the open (north) side; the wing doors on the courtyard open at 2F */
+function buildCourt(info, C) {
+  const H = info.levels[1], P = C.poly, stone = M(0xffffff, { map: concreteTex, color: 0xc9c3b7 });
+  const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(P.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: H, bevelEnabled: false }).rotateX(-Math.PI / 2), stone); m.castShadow = m.receiveShadow = true; scene.add(m); blockers.push(m);
+  const top = shapeMesh(P, M(0xffffff, { map: grayPaverTex }), H + .02, 4);
+  DECKS.push({ poly: P, y: H, box: bboxOf(P) });
+  // open edge: parapet + walls, except the stair
+  const [a, b] = C.open, L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, mid = L / 2, sw = C.stair;
+  let nx = uz, nz = -ux; const cx = (a[0] + b[0]) / 2, cz = (a[1] + b[1]) / 2; if (inPoly(cx + nx, cz + nz, P)) { nx = -nx; nz = -nz; }
+  for (const [t0, t1] of [[0, mid - sw / 2], [mid + sw / 2, L]]) { const A = [a[0] + ux * t0, a[1] + uz * t0], B = [a[0] + ux * t1, a[1] + uz * t1]; addWall(A[0], A[1], B[0], B[1], -99, H + 2.2); const pw = box(t1 - t0, 1.1, .25, stone, (A[0] + B[0]) / 2 - nx * .12, H + .55, (A[1] + B[1]) / 2 - nz * .12); pw.rotation.y = Math.atan2(-uz, ux) ; }
+  // the other courtyard edges are building walls; planters on the deck
+  for (let k = 0; k < 4; k++) { const [x, z] = centroid(P), j = (k - 1.5) * 6; const px = x + ux * j, pz = z + uz * j; if (!inPoly(px, pz, P)) continue; box(3, .6, 1.2, stone, px, H + .3, pz).rotation.y = Math.atan2(ux, uz); treeSpots.shrub.push([px, pz, 2.4, H + .4]); addCircle(px, pz, 1.4, H - .5, H + 2); }
+  buildSteps(a[0] + ux * mid, a[1] + uz * mid, nx, nz, { w: sw, land: 0 }, H, true);
+  zone('財金中庭', '財金學院 二樓中庭', bboxOf(P), '財金中庭', 3);
+}
+/* 學生活動中心 (Street View 2018, taken on it): a covered skybridge at 2F level — white portal frames, rails both
+   sides — from the 圓形廣場 side (stairs down) to a 2F door of the building */
+function buildSkybridge(info, S) {
+  const H = info.levels[1], P = S.path, w = S.w, slab = M(0xffffff, { map: concreteTex, color: 0xd9d4ca }), white = M(0xf1efe9, { roughness: .6 }), stripe = M(0xd98a5f, { roughness: .7 }), floor = M(0xffffff, { map: grayPaverTex, color: 0xd8c8b4 });
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]) + (i < P.length - 1 ? w / 2 : 1.2), ux = (b[0] - a[0]) / Math.hypot(b[0] - a[0], b[1] - a[1]), uz = (b[1] - a[1]) / Math.hypot(b[0] - a[0], b[1] - a[1]), nx = -uz, nz = ux, ang = Math.atan2(ux, uz);
+    const s0 = i > 1 ? -w / 2 : 0, poly = [[a[0] + ux * s0 + nx * w / 2, a[1] + uz * s0 + nz * w / 2], [a[0] + ux * L + nx * w / 2, a[1] + uz * L + nz * w / 2], [a[0] + ux * L - nx * w / 2, a[1] + uz * L - nz * w / 2], [a[0] + ux * s0 - nx * w / 2, a[1] + uz * s0 - nz * w / 2]];
+    DECKS.push({ poly, y: H, box: bboxOf(poly) }); pavedPolys.push(poly.map(([x, z], k) => [x + (k === 0 || k === 3 ? -ux * 3 : ux * 3) + (k < 2 ? nx : -nx) * 3, z + (k === 0 || k === 3 ? -uz * 3 : uz * 3) + (k < 2 ? nz : -nz) * 3])); // no trees growing through it
+    const mx = a[0] + ux * (s0 + L) / 2, mz = a[1] + uz * (s0 + L) / 2, len = L - s0;
+    const sl = box(w, .45, len, slab, mx, H - .22, mz); sl.rotation.y = ang; blockers.push(sl); const fl = box(w - .1, .02, len, floor, mx, H + .01, mz, scene, false); fl.rotation.y = ang;
+    for (let t = s0 + 1.5; t < L - .5; t += 4.2) for (const sg of [-1, 1]) { const x = a[0] + ux * t + nx * sg * (w / 2 + .1), z = a[1] + uz * t + nz * sg * (w / 2 + .1);
+      box(.3, H + 2.8, .3, i === P.length - 1 && t > L - 6 ? stripe : white, x, (H + 2.8) / 2, z).rotation.y = ang; addCircle(x, z, .25, -99, H + 3); }
+    for (let t = s0 + 1.5; t < L - .5; t += 4.2) { const x = a[0] + ux * t, z = a[1] + uz * t; box(w + .5, .25, .3, white, x, H + 2.8, z).rotation.y = ang; }
+    for (const sg of [-1, 1]) { const ox = nx * sg * (w / 2 - .05), oz = nz * sg * (w / 2 - .05); const r = box(.06, 1.0, len, white, mx + ox, H + .5, mz + oz, scene, false); r.rotation.y = ang; const tr = box(.12, .08, len, white, mx + ox, H + 1.04, mz + oz, scene, false); tr.rotation.y = ang;
+      const r0 = i > 1 ? w / 2 : 0, r1 = i < P.length - 1 ? L - w : L; // leave the corner squares open; their outer sides are closed below
+      const A = [a[0] + ux * r0 + nx * sg * w / 2, a[1] + uz * r0 + nz * sg * w / 2], B = [a[0] + ux * r1 + nx * sg * w / 2, a[1] + uz * r1 + nz * sg * w / 2]; addWall(A[0], A[1], B[0], B[1], H - .4, H + 2.2, false, .1); }
+    { const rf = box(w + .6, .1, len, M(0xb9c2c6, { metalness: .4, roughness: .5 }), mx, H + 3.05, mz, scene, false); rf.rotation.y = ang; }
+  }
+  // corners: close the two outer sides of each turn square
+  for (let i = 1; i < P.length - 1; i++) {
+    const a = P[i - 1], c = P[i], d = P[i + 1], l1 = Math.hypot(c[0] - a[0], c[1] - a[1]), l2 = Math.hypot(d[0] - c[0], d[1] - c[1]);
+    const u1 = [(c[0] - a[0]) / l1, (c[1] - a[1]) / l1], u2 = [(d[0] - c[0]) / l2, (d[1] - c[1]) / l2], h = w / 2;
+    for (const [u, sgn] of [[u1, 1], [u2, -1]]) { const n = [-u[1], u[0]], ex = c[0] + u[0] * h * sgn, ez = c[1] + u[1] * h * sgn; addWall(ex + n[0] * h, ez + n[1] * h, ex - n[0] * h, ez - n[1] * h, H - .4, H + 2.2, false, .1); const r = box(.06, 1, w, M(0xf1efe9), ex, H + .5, ez, scene, false); r.rotation.y = Math.atan2(n[0], n[1]); }
+  }
+  // stairs down at the plaza end
+  const a = P[0], b = P[1], l = Math.hypot(b[0] - a[0], b[1] - a[1]); buildSteps(a[0], a[1], (a[0] - b[0]) / l, (a[1] - b[1]) / l, { w: S.w, land: 0 }, H, true);
+  zone('空橋', '學生活動中心 二樓空橋', bboxOf(P, 4), '空橋', 3);
 }
 function buildSpecials() {
   const by = n => BUILT.find(b => b.name.startsWith(n));
@@ -1821,8 +1867,15 @@ function buildShell(info, b, L, mat, floors, fh, corePts, uOff) {
   const doorPts = arcade || colo ? corePts : pts, setback = arcade ? 3 : 0, sb = d => arcade ? 3 : colo && d.i === E.i ? L.colonnade.d : 0;
   const gx = E.x - E.nx * sb(E), gz = E.z - E.nz * sb(E);
   const doors = (info.doors || [E]).map(d => ({ ...d, gx: d.x - d.nx * sb(d), gz: d.z - d.nz * sb(d) }));
-  const gap = doors.map(d => ({ i: d.i, x: d.gx, z: d.gz, w: DOOR.w, top: base + DOOR.h, lintel: base + DOOR.h - 1.0, bot: base || undefined }));
+  // each door opens at its own floor: the raised ground floor, or 2F where it faces a raised courtyard (財金)
+  const courtH = L.court ? levels[1] + base : 0, inCourt = d => L.court && inPoly(d.x + d.nx * 1.5, d.z + d.nz * 1.5, L.court.poly);
+  for (const d of doors) d.y0 = inCourt(d) ? courtH : base;
+  const gap = doors.map(d => ({ i: d.i, x: d.gx, z: d.gz, w: DOOR.w, top: d.y0 + DOOR.h, lintel: d.y0 + DOOR.h - 1.0, bot: d.y0 || undefined }));
   info.levels = levels;
+  if (L.skybridge) { // the skybridge comes in at 2F: a door in whichever wall its last point touches
+    const [x, z] = L.skybridge.path[L.skybridge.path.length - 1]; let bi = 0, bd = 1e9; for (let i = 0; i < pts.length; i++) { const a = pts[i], b2 = pts[(i + 1) % pts.length], [dd] = segDist(x, z, a[0], a[1], b2[0], b2[1]); if (dd < bd) { bd = dd; bi = i; } }
+    info.skyDoor = { i: bi, x, z }; gap.push({ i: bi, x, z, w: L.skybridge.w - .4, bot: levels[1], top: levels[1] + DOOR.h, lintel: levels[1] + DOOR.h - .8 });
+  }
   if (L.terrace || L.rotunda) gap.push({ i: E.i, x: E.x, z: E.z, w: 3.2, bot: levels[1], top: levels[1] + DOOR.h + .3, lintel: levels[1] + DOOR.h - .8 }); // main door one floor up, onto the terrace
   const inner = insetPoly(pts, .25), innerCore = arcade || (L.colonnade && corePts !== pts) ? insetPoly(corePts, .25) : inner;
   // outer skin and inner skin (facade texture inside too, so the windows read from the rooms)
@@ -1856,18 +1909,18 @@ function buildShell(info, b, L, mat, floors, fh, corePts, uOff) {
       for (let i = 0; i < pts.length; i++) { if (open && !open.includes(i)) continue; const a = pts[i], b2 = pts[(i + 1) % pts.length], L2 = Math.hypot(b2[0] - a[0], b2[1] - a[1]); const dx = (b2[0] - a[0]) / L2, dz = (b2[1] - a[1]) / L2, at = t => [a[0] + dx * t, a[1] + dz * t];
         for (const [ta, tb, cov] of gapSpans(gapsOn(steps, i, a, b2, L2), L2)) if (!cov.length && tb - ta > .05) { const A = at(ta), B = at(tb); addWall(A[0], A[1], B[0], B[1], -99, base - .3); } }
     }
-    doors.forEach((d, k) => buildSteps(d.x, d.z, d.nx, d.nz, k === 0 && L.grand ? { ...L.grand, w: Math.min(L.grand.w, d.len - 1) } : { w: DOOR.w + 1.6, land: 1.1 }, base, k === 0)); // doors[0] is the main entrance
+    doors.forEach((d, k) => d.y0 === base && buildSteps(d.x, d.z, d.nx, d.nz, k === 0 && L.grand ? { ...L.grand, w: Math.min(L.grand.w, d.len - 1) } : { w: DOOR.w + 1.6, land: 1.1 }, base, k === 0)); // doors[0] is the main entrance
   }
   // every doorway: jambs + head between the two skins; side entrances also get a small canopy and a paved doorstep
   const fr = M(0x3a3f44, { metalness: .5, roughness: .4 });
   doors.forEach((d, k) => {
-    const g = new THREE.Group(); g.position.set(d.gx, base, d.gz); g.rotation.y = Math.atan2(d.nx, d.nz); scene.add(g);
+    const g = new THREE.Group(); g.position.set(d.gx, d.y0, d.gz); g.rotation.y = Math.atan2(d.nx, d.nz); scene.add(g);
     for (const sx of [-1, 1]) box(.12, DOOR.h, .4, fr, sx * (DOOR.w / 2 - .06), DOOR.h / 2, -.15, g, false);
     box(DOOR.w, .14, .4, fr, 0, DOOR.h - .07, -.15, g, false);
     box(DOOR.w, .02, .45, matConcrete, 0, .01, -.15, g, false);
     if (k > 0 && !arcade) { box(DOOR.w + 1.4, .16, 1.8, matConcrete, 0, DOOR.h + .35, .9 + setback, g); for (const sx of [-1, 1]) box(.24, .7, .5, fr, sx * (DOOR.w / 2 + .45), DOOR.h + .3, .25, g, false); for (const sx of [-1, 1]) box(.7, 1.3, .06, matGlassDark, sx * (DOOR.w / 2 + .38), DOOR.h / 2 + .5, .03, g, false); }
     const tx = -d.nz, tz = d.nx, P = (a, o) => [d.x + tx * a + d.nx * o, d.z + tz * a + d.nz * o];
-    const pad = [P(-2, .05), P(2, .05), P(2, 4.2), P(-2, 4.2)]; if (!base) shapeMesh(pad, matGrayPaver, .035, 4); pavedPolys.push(pad);
+    const pad = [P(-2, .05), P(2, .05), P(2, 4.2), P(-2, 4.2)]; if (!base && !d.y0) shapeMesh(pad, matGrayPaver, .035, 4); pavedPolys.push(pad);
   });
   info.doorsIn = doors;
   buildInterior(info, L, levels, pts, inner, innerCore, arcade || colo, gx, gz);
