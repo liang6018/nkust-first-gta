@@ -599,7 +599,7 @@ const LOOK = {
   '實作工場(長條)': { name: '實作工廠', en: 'Workshop', wall: '#B4BCC0', accent: '#7F8C93', kind: 'factory', floors: 2, h: 9 },
   '職務宿舍': { en: 'Staff Housing', wall: '#E9E5DC', accent: '#B9B3A8', kind: 'flat', frame: '#FBFAF6', floors: 4, h: 12.5, noSign: true },
   '敬業樓': { en: 'Jing-Ye Hall · Dormitory', wall: '#9C7A62', accent: '#A8A8A2', kind: 'dorm' },
-  '樂群樓(學生宿舍)': { name: '樂群樓（學生宿舍）', en: 'Le-Qun Hall · Dormitory', wall: '#C0603F', accent: '#BDBDB8', kind: 'balcony' },
+  '樂群樓(學生宿舍)': { name: '樂群樓（學生宿舍）', en: 'Le-Qun Hall · Dormitory', wall: '#C0603F', accent: '#BDBDB8', kind: 'balcony', skybridge: { path: [[-414.9, 259.5], [-404, 283.6]], w: 3, both: true, truss: true } },
   '游泳館': { en: 'Natatorium', wall: '#A9AAA5', accent: '#B5583C', kind: 'pool' },
   '產業實驗園區(OSM名:產業創新園區)': { name: '產業實驗園區', en: 'Industry Park', wall: '#BFC2C2', accent: '#8F9393', kind: 'unit', frame: '#E5E7E6', floors: 2, h: 8 },
 };
@@ -751,12 +751,12 @@ function facadeFor(key, L) {
 }
 function facadeMat2(key, L) { const f = facadeFor(key, L); const m = new THREE.MeshStandardMaterial({ map: f.map, emissiveMap: f.emis, emissive: 0xffffff, emissiveIntensity: 0, roughness: .78, metalness: .04 }); winMats.push(m); return m; }
 /* walls of an extruded polygon; UV: u = metres/32 (8 bays), v = floors/8 */
-function wallRing(pts, y0, y1, mat, floorH, uOff = 0, out = 0, gap = null, inward = false) {
+function wallRing(pts, y0, y1, mat, floorH, uOff = 0, out = 0, gap = null, inward = false, vOff = 0) { // vOff: height where the first storey's windows start
   const ccw = polyArea(pts) > 0, pos = [], uv = [], idx = []; let s = 0;
   const P = out ? pts.map(([x, z]) => { const [cx, cz] = centroid(pts); const d = Math.hypot(x - cx, z - cz) || 1; return [x + (x - cx) / d * out, z + (z - cz) / d * out]; }) : pts;
   const flip = ccw !== inward; // outer faces for !inward, faces pointing into the room for inward
   const quad = (a, b, ya, yb, ua, ub) => {
-    const q = pos.length / 3, va = ya / floorH / 8, vb = yb / floorH / 8;
+    const q = pos.length / 3, va = (ya - vOff) / floorH / 8, vb = (yb - vOff) / floorH / 8;
     if (!flip) { pos.push(b[0], ya, b[1], a[0], ya, a[1], a[0], yb, a[1], b[0], yb, b[1]); uv.push(ub, va, ua, va, ua, vb, ub, vb); }
     else { pos.push(a[0], ya, a[1], b[0], ya, b[1], b[0], yb, b[1], a[0], yb, a[1]); uv.push(ua, va, ub, va, ub, vb, ua, vb); }
     idx.push(q, q + 1, q + 2, q, q + 2, q + 3);
@@ -1030,9 +1030,9 @@ function buildCourt(info, C) {
 /* 學生活動中心 (Street View 2018, taken on it): a covered skybridge at 2F level — white portal frames, rails both
    sides — from the 圓形廣場 side (stairs down) to a 2F door of the building */
 function buildSkybridge(info, S) {
-  const H = info.levels[1], P = S.path, w = S.w, slab = M(0xffffff, { map: concreteTex, color: 0xd9d4ca }), white = M(0xf1efe9, { roughness: .6 }), stripe = M(0xd98a5f, { roughness: .7 }), floor = M(0xffffff, { map: grayPaverTex, color: 0xd8c8b4 });
+  const H = info.levels[1], P = S.path, w = S.w, slab = M(0xffffff, { map: concreteTex, color: 0xd9d4ca }), white = S.truss ? M(0x3e7d5a, { metalness: .4, roughness: .5 }) : M(0xf1efe9, { roughness: .6 }), stripe = M(0xd98a5f, { roughness: .7 }), floor = M(0xffffff, { map: grayPaverTex, color: 0xd8c8b4 });
   for (let i = 1; i < P.length; i++) {
-    const a = P[i - 1], b = P[i], L = Math.hypot(b[0] - a[0], b[1] - a[1]) + (i < P.length - 1 ? w / 2 : 1.2), ux = (b[0] - a[0]) / Math.hypot(b[0] - a[0], b[1] - a[1]), uz = (b[1] - a[1]) / Math.hypot(b[0] - a[0], b[1] - a[1]), nx = -uz, nz = ux, ang = Math.atan2(ux, uz);
+    const a0 = P[i - 1], b = P[i], l0 = Math.hypot(b[0] - a0[0], b[1] - a0[1]), a = i === 1 && S.both ? [a0[0] - (b[0] - a0[0]) / l0 * 1.2, a0[1] - (b[1] - a0[1]) / l0 * 1.2] : a0, L = Math.hypot(b[0] - a[0], b[1] - a[1]) + (i < P.length - 1 ? w / 2 : 1.2), ux = (b[0] - a[0]) / Math.hypot(b[0] - a[0], b[1] - a[1]), uz = (b[1] - a[1]) / Math.hypot(b[0] - a[0], b[1] - a[1]), nx = -uz, nz = ux, ang = Math.atan2(ux, uz);
     const s0 = i > 1 ? -w / 2 : 0, poly = [[a[0] + ux * s0 + nx * w / 2, a[1] + uz * s0 + nz * w / 2], [a[0] + ux * L + nx * w / 2, a[1] + uz * L + nz * w / 2], [a[0] + ux * L - nx * w / 2, a[1] + uz * L - nz * w / 2], [a[0] + ux * s0 - nx * w / 2, a[1] + uz * s0 - nz * w / 2]];
     DECKS.push({ poly, y: H, box: bboxOf(poly) }); pavedPolys.push(poly.map(([x, z], k) => [x + (k === 0 || k === 3 ? -ux * 3 : ux * 3) + (k < 2 ? nx : -nx) * 3, z + (k === 0 || k === 3 ? -uz * 3 : uz * 3) + (k < 2 ? nz : -nz) * 3])); // no trees growing through it
     const mx = a[0] + ux * (s0 + L) / 2, mz = a[1] + uz * (s0 + L) / 2, len = L - s0;
@@ -1044,6 +1044,7 @@ function buildSkybridge(info, S) {
       const r0 = i > 1 ? w / 2 : 0, r1 = i < P.length - 1 ? L - w : L; // leave the corner squares open; their outer sides are closed below
       const A = [a[0] + ux * r0 + nx * sg * w / 2, a[1] + uz * r0 + nz * sg * w / 2], B = [a[0] + ux * r1 + nx * sg * w / 2, a[1] + uz * r1 + nz * sg * w / 2]; addWall(A[0], A[1], B[0], B[1], H - .4, H + 2.2, false, .1); }
     { const rf = box(w + .6, .1, len, M(0xb9c2c6, { metalness: .4, roughness: .5 }), mx, H + 3.05, mz, scene, false); rf.rotation.y = ang; }
+    if (S.truss) for (const sg of [-1, 1]) for (let t = s0 + 1.5; t < L - 4.5; t += 4.2) { const x = a[0] + ux * (t + 2.1) + nx * sg * (w / 2 + .1), z = a[1] + uz * (t + 2.1) + nz * sg * (w / 2 + .1); const br = box(.12, Math.hypot(4.2, 2.8), .12, white, x, H + 1.4, z, scene, false); br.rotation.set(0, ang, 0); br.rotateX((t / 4.2 | 0) % 2 ? .98 : -.98); } // green steel truss sides
   }
   // corners: close the two outer sides of each turn square
   for (let i = 1; i < P.length - 1; i++) {
@@ -1052,8 +1053,8 @@ function buildSkybridge(info, S) {
     for (const [u, sgn] of [[u1, 1], [u2, -1]]) { const n = [-u[1], u[0]], ex = c[0] + u[0] * h * sgn, ez = c[1] + u[1] * h * sgn; addWall(ex + n[0] * h, ez + n[1] * h, ex - n[0] * h, ez - n[1] * h, H - .4, H + 2.2, false, .1); const r = box(.06, 1, w, M(0xf1efe9), ex, H + .5, ez, scene, false); r.rotation.y = Math.atan2(n[0], n[1]); }
   }
   // stairs down at the plaza end
-  const a = P[0], b = P[1], l = Math.hypot(b[0] - a[0], b[1] - a[1]); buildSteps(a[0], a[1], (a[0] - b[0]) / l, (a[1] - b[1]) / l, { w: S.w, land: 0 }, H, true);
-  zone('空橋', '學生活動中心 二樓空橋', bboxOf(P, 4), '空橋', 3);
+  const a = P[0], b = P[1], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!S.both) buildSteps(a[0], a[1], (a[0] - b[0]) / l, (a[1] - b[1]) / l, { w: S.w, land: 0 }, H, true);
+  zone('空橋', S.both ? '樂群樓 二樓鋼構空橋' : '學生活動中心 二樓空橋', bboxOf(P, 4), '空橋', 3);
 }
 function buildSpecials() {
   const by = n => BUILT.find(b => b.name.startsWith(n));
@@ -1873,8 +1874,9 @@ function buildShell(info, b, L, mat, floors, fh, corePts, uOff) {
   const gap = doors.map(d => ({ i: d.i, x: d.gx, z: d.gz, w: DOOR.w, top: d.y0 + DOOR.h, lintel: d.y0 + DOOR.h - 1.0, bot: d.y0 || undefined }));
   info.levels = levels;
   if (L.skybridge) { // the skybridge comes in at 2F: a door in whichever wall its last point touches
-    const [x, z] = L.skybridge.path[L.skybridge.path.length - 1]; let bi = 0, bd = 1e9; for (let i = 0; i < pts.length; i++) { const a = pts[i], b2 = pts[(i + 1) % pts.length], [dd] = segDist(x, z, a[0], a[1], b2[0], b2[1]); if (dd < bd) { bd = dd; bi = i; } }
-    info.skyDoor = { i: bi, x, z }; gap.push({ i: bi, x, z, w: L.skybridge.w - .4, bot: levels[1], top: levels[1] + DOOR.h, lintel: levels[1] + DOOR.h - .8 });
+    const SP = L.skybridge.path, ends = L.skybridge.both ? [SP[0], SP[SP.length - 1]] : [SP[SP.length - 1]];
+    for (const [x, z] of ends) { let bi = 0, bd = 1e9; for (let i = 0; i < pts.length; i++) { const a = pts[i], b2 = pts[(i + 1) % pts.length], [dd] = segDist(x, z, a[0], a[1], b2[0], b2[1]); if (dd < bd) { bd = dd; bi = i; } }
+      info.skyDoor = { i: bi, x, z }; gap.push({ i: bi, x, z, w: L.skybridge.w - .4, bot: levels[1], top: levels[1] + DOOR.h, lintel: levels[1] + DOOR.h - .8 }); }
   }
   if (L.terrace || L.rotunda) gap.push({ i: E.i, x: E.x, z: E.z, w: 3.2, bot: levels[1], top: levels[1] + DOOR.h + .3, lintel: levels[1] + DOOR.h - .8 }); // main door one floor up, onto the terrace
   const inner = insetPoly(pts, .25), innerCore = arcade || (L.colonnade && corePts !== pts) ? insetPoly(corePts, .25) : inner;
@@ -1886,17 +1888,17 @@ function buildShell(info, b, L, mat, floors, fh, corePts, uOff) {
     ringWalls(corePts, -99, levels[1] - .3, gap); ringWalls(pts, base + 2.2, h + 1, null);
   } else if (colo) {
     // ground floor behind the colonnade; full outline above it
-    blockers.push(wallRing(corePts, 0, levels[1], mat, fh, uOff, 0, gap));
-    blockers.push(wallRing(innerCore, 0, levels[1], mat, fh, uOff, 0, gap, true));
-    blockers.push(wallRing(pts, levels[1], h, mat, fh, uOff, 0, null)); blockers.push(wallRing(inner, levels[1], h, mat, fh, uOff, 0, null, true));
+    blockers.push(wallRing(corePts, 0, levels[1], mat, fh, uOff, 0, gap, false, base));
+    blockers.push(wallRing(innerCore, 0, levels[1], mat, fh, uOff, 0, gap, true, base));
+    blockers.push(wallRing(pts, levels[1], h, mat, fh, uOff, 0, null, false, base)); blockers.push(wallRing(inner, levels[1], h, mat, fh, uOff, 0, null, true, base));
     ringWalls(corePts, -99, levels[1] - .3, gap); ringWalls(pts, levels[1] - .4, h + 1, null);
     const ceil = shapeMesh(pts, M(0xe6e1d8, { map: concreteTex, side: THREE.DoubleSide }), levels[1] - .03, 6); ceil.castShadow = false;
     const a = pts[E.i], b2 = pts[(E.i + 1) % pts.length], Ls = Math.hypot(b2[0] - a[0], b2[1] - a[1]), n = Math.max(2, Math.round(Ls / 6)), colM = M(0xb9b6ae, { map: concreteTex, roughness: .8 });
     for (let k = 0; k <= n; k++) { const t = .6 / Ls + (1 - 1.2 / Ls) * k / n, x = lerp(a[0], b2[0], t) - E.nx * .55, z = lerp(a[1], b2[1], t) - E.nz * .55; cyl(.38, .38, levels[1], colM, x, levels[1] / 2, z, scene, 14); addCircle(x, z, .42, -99, levels[1]); }
   } else {
-    blockers.push(wallRing(pts, 0, h, mat, fh, uOff, 0, gap));
-    blockers.push(wallRing(inner, 0, h, mat, fh, uOff, 0, gap, true));
-    if (L.plinth) wallRing(pts, 0, Math.min(fh, DOOR.h + .4), M(L.plinth, { map: concreteTex, roughness: .85 }), fh, 0, .06, gap);
+    blockers.push(wallRing(pts, 0, h, mat, fh, uOff, 0, gap, false, base));
+    blockers.push(wallRing(inner, 0, h, mat, fh, uOff, 0, gap, true, base));
+    if (L.plinth) wallRing(pts, 0, base ? base + .9 : Math.min(fh, DOOR.h + .4), M(L.plinth, { map: concreteTex, roughness: .85 }), fh, 0, .06, gap);
     ringWalls(pts, -99, h + 1, gap);
   }
   if (base) {
