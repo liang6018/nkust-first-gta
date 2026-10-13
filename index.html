@@ -48,6 +48,19 @@ body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-ui);o
 #tip{left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);font-size:12px;color:var(--muted);letter-spacing:.08em;white-space:nowrap;}
 #toast{left:50%;top:calc(44px + env(safe-area-inset-top,0px));transform:translateX(-50%);font-weight:700;font-size:15px;opacity:0;transition:opacity .4s;}
 #toast.on{opacity:1;}
+#setb{position:fixed;right:16px;top:calc(110px + env(safe-area-inset-top,0px));z-index:6;background:var(--glass);border:1px solid var(--line);color:var(--paper);font:inherit;font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer;}
+body:not(.playing) #setb{visibility:hidden;} body.touch #setb{display:none;}
+#settings{position:fixed;inset:0;z-index:16;display:grid;place-items:center;background:rgba(8,10,12,.55);}
+#settings .card{width:min(560px,94vw);max-height:88vh;overflow-y:auto;background:#141a1f;border:1px solid var(--line);border-radius:12px;padding:14px 18px;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+#settings h2{margin:0 0 6px;font-size:20px;} #settings h3{margin:14px 0 6px;font-size:12px;letter-spacing:.2em;color:var(--amber);}
+#settings .row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:14px;} #settings .row>span:first-child{min-width:92px;color:#cfc9bc;}
+#settings input[type=range]{flex:1;accent-color:#f2a93b;height:28px;} #settings .val{min-width:38px;text-align:right;font-family:var(--f-num);font-size:18px;}
+#settings .seg{display:flex;gap:6px;flex-wrap:wrap;} #settings .seg button,#settings .btn{font:inherit;font-weight:700;font-size:13px;min-height:34px;padding:0 12px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--paper);cursor:pointer;}
+#settings .seg button.on{background:var(--amber);color:#1a1206;border-color:var(--amber);}
+#settings .tonly{display:none;} body.touch #settings .tonly{display:block;}
+#editbar{position:fixed;left:50%;top:calc(52px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:20;background:var(--amber);color:#1a1206;font-weight:900;padding:10px 16px;border-radius:8px;font-size:14px;pointer-events:auto;}
+#editlayer{position:fixed;inset:0;z-index:19;}
+body.editing #touch .tb,body.editing #act,body.editing #mini{outline:2px dashed var(--amber);outline-offset:3px;}
 #mission{left:16px;top:calc(14px + env(safe-area-inset-top,0px));max-width:330px;background:var(--glass);border:1px solid var(--line);border-left:4px solid #3fc46b;border-radius:8px;padding:9px 12px;}
 #mission .h{font-size:11px;letter-spacing:.22em;color:#3fc46b;font-weight:700;}
 #mission .t{font-size:18px;font-weight:900;margin:2px 0;}
@@ -161,6 +174,29 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
 <div id="mission" class="hud" hidden><div class="h">任務進行中</div><div class="t" id="mT"></div><div class="o" id="mO"></div><div class="m" id="mC"></div></div>
 <div id="mlist" hidden><div class="card"><h2>校園任務</h2><div class="sub" id="mlSub"></div><div id="mlItems"></div><div style="text-align:right;margin-top:10px"><button type="button" class="x" id="mlClose">關閉（J）</button></div></div></div>
 <button id="sound" type="button" hidden>聲音：開</button>
+<button id="setb" type="button">設定（Esc）</button>
+<div id="settings" hidden><div class="card">
+  <h2>設定</h2>
+  <h3>畫面</h3>
+  <div class="row"><span>畫質</span><div class="seg" data-set="quality"><button data-v="low">低</button><button data-v="mid">中</button><button data-v="high">高</button></div></div>
+  <div class="row"><span>時間</span><div class="seg" data-set="time"><button data-v="day">白天</button><button data-v="dusk">黃昏</button><button data-v="night">夜晚</button></div></div>
+  <div class="row"><span>天氣</span><div class="seg" data-set="rain"><button data-v="0">晴天</button><button data-v="1">下雨</button></div></div>
+  <h3>聲音</h3>
+  <div class="row"><span>總音量</span><input type="range" min="0" max="1.5" step=".05" data-set="vol.master"><span class="val"></span></div>
+  <div class="row"><span>引擎</span><input type="range" min="0" max="1.5" step=".05" data-set="vol.engine"><span class="val"></span></div>
+  <div class="row"><span>喇叭／鈴鐺</span><input type="range" min="0" max="1.5" step=".05" data-set="vol.horn"><span class="val"></span></div>
+  <div class="row"><span>環境（雨聲、鐘聲）</span><input type="range" min="0" max="1.5" step=".05" data-set="vol.amb"><span class="val"></span></div>
+  <h3>操作</h3>
+  <div class="row"><span>視角靈敏度</span><input type="range" min=".3" max="2.5" step=".05" data-set="sens"><span class="val"></span></div>
+  <div class="row"><span>鏡頭距離</span><input type="range" min=".6" max="1.8" step=".05" data-set="cam"><span class="val"></span></div>
+  <div class="tonly">
+    <div class="row"><span>搖桿大小</span><input type="range" min=".7" max="1.5" step=".05" data-set="joy"><span class="val"></span></div>
+    <div class="row"><span>按鈕大小</span><input type="range" min=".7" max="1.5" step=".05" data-set="btn"><span class="val"></span></div>
+    <div class="row"><span>震動</span><div class="seg" data-set="vibrate"><button data-v="1">開</button><button data-v="0">關</button></div></div>
+    <div class="row"><span>按鈕位置</span><button class="btn" id="editLayout">拖曳調整</button><button class="btn" id="resetLayout">重設</button></div>
+  </div>
+  <div style="text-align:right;margin-top:12px"><button class="btn" id="setClose">關閉</button></div>
+</div></div>
 
 <div class="help" id="help" hidden>
   <h3>步行</h3>
@@ -189,7 +225,7 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
     <button type="button" class="tb sm" data-k="KeyJ">任務</button>
     <button type="button" class="tb sm" data-k="KeyM">地圖</button>
     <button type="button" class="tb sm" data-k="KeyN">日夜</button>
-    <button type="button" class="tb sm" data-k="KeyG" id="bQual">畫質</button>
+    <button type="button" class="tb sm" data-k="Escape" id="bSet">設定</button>
     <button type="button" class="tb sm" id="bFull">全螢幕</button>
   </div>
   <div id="rotate" hidden>橫放手機玩起來更順</div>
@@ -248,6 +284,11 @@ function shade(hex, amt) {
 }
 
 /* ================= renderer / scene ================= */
+/* player settings (menu: 設定 / Esc), saved per browser */
+const SET = (() => { const d = { vol: { master: 1, engine: 1, horn: 1, amb: 1 }, sens: 1, cam: 1, joy: 1, btn: 1, vibrate: true, layout: {}, time: 'day', rain: false };
+  try { const o = JSON.parse(localStorage.getItem('nkust-gta-settings') || '{}'); return { ...d, ...o, vol: { ...d.vol, ...(o.vol || {}) }, layout: { ...(o.layout || {}) } }; } catch (e) { return d; } })();
+function saveSettings() { try { SET.time = typeof timeMode === 'string' ? timeMode : SET.time; SET.rain = typeof raining === 'boolean' ? raining : SET.rain; localStorage.setItem('nkust-gta-settings', JSON.stringify(SET)); } catch (e) { } }
+const vib = p => { if (SET.vibrate && navigator.vibrate) navigator.vibrate(p); };
 /* graphics quality: 低 / 中 / 高. Phones default to 中 (or 低 on older ones); saved per browser.
    Antialias and the log depth buffer are fixed when the renderer is made, so they follow the level chosen at load. */
 const QUALITY = {
@@ -293,7 +334,7 @@ function applyQuality(q, save = true) {
 }
 applyQuality(QL, false);
 const pmrem = new THREE.PMREMGenerator(renderer);
-let envRT = null, isNight = false, lightDir = new THREE.Vector3(0.5, 0.7, 0.4).normalize();
+let envRT = null, isNight = false, timeMode = 'day', raining = false, lightDir = new THREE.Vector3(0.5, 0.7, 0.4).normalize();
 
 /* ================= textures ================= */
 function canvasTex(w, h, draw, srgb = true) {
@@ -610,6 +651,7 @@ const marks = [];
 function paint(x, z, w, d, c = 0xf1f1ea, y = .05, rot = 0, flat = false) { marks.push({ x, z, w, d, c, y: (flat ? 0 : groundY(x, z)) + y, rot }); }
 const treeSpots = { round: [], palm: [], royal: [], rain: [], terminalia: [], shrub: [] };
 const lampSpots = [];
+const LAMPS = []; // [x, lampY, z, groundY] of every street / bridge lamp, for the night light pools
 let waterJets = [], flags = [];
 const pavedPolys = [];  // polygons where trees must not grow / that count as paved
 
@@ -2057,7 +2099,7 @@ function buildBridge() {
       const m = ribbon(r.p, r.half, .22, M(0xffffff, { map: medianTex, roughness: .8 }), { uv: 3, flatY: DECK });
       for (const sg of [-1, 1]) ribbon(r.p, .15, .2, matConcrete, { offset: sg * (r.half + .05), flatY: DECK });
       for (let s = 6; s < polyLen(r.p) - 4; s += 9) { const [x, z] = sampleLine(r.p, s); cyl(.45, .3, .6, M(0xa55a36, { roughness: .9 }), x, DECK + .52, z, scene, 10); addCircle(x, z, .5, DECK - 1, DECK + 3); treeSpots.shrub.push([x, z, 1.2, DECK + .9]); }
-      for (let s = 10; s < polyLen(r.p); s += 26) { const [x, z, tx, tz] = sampleLine(r.p, s); cyl(.08, .1, 8, matMetal, x, DECK + 4.2, z, scene, 8); addCircle(x, z, .15, DECK - 1, DECK + 3); for (const sg of [-1, 1]) { const arm = box(.08, .08, 2.6, matMetal, x - tz * sg * 1.3, DECK + 8.1, z + tx * sg * 1.3); arm.rotation.y = Math.atan2(-tz * sg, tx * sg); box(.5, .14, .3, matLamp, x - tz * sg * 2.5, DECK + 8, z + tx * sg * 2.5); } }
+      for (let s = 10; s < polyLen(r.p); s += 26) { const [x, z, tx, tz] = sampleLine(r.p, s); for (const sg of [-1, 1]) LAMPS.push([x - tz * sg * 2.5, DECK + 7.9, z + tx * sg * 2.5, DECK]); cyl(.08, .1, 8, matMetal, x, DECK + 4.2, z, scene, 8); addCircle(x, z, .15, DECK - 1, DECK + 3); for (const sg of [-1, 1]) { const arm = box(.08, .08, 2.6, matMetal, x - tz * sg * 1.3, DECK + 8.1, z + tx * sg * 1.3); arm.rotation.y = Math.atan2(-tz * sg, tx * sg); box(.5, .14, .3, matLamp, x - tz * sg * 2.5, DECK + 8, z + tx * sg * 2.5); } }
     } else {
       ribbon(r.p, r.half, .05, matAsphalt, { uv: 10, flatY: DECK });
       const Lt = polyLen(r.p); for (let s = 2; s < Lt - 2; s += 8) { const [x, z, tx, tz] = sampleLine(r.p, s); paint(x, z, .15, 3, 0xf1f1ea, .06, Math.atan2(tx, tz)); }
@@ -2440,6 +2482,13 @@ function buildFurniture() {
   const heads = new THREE.InstancedMesh(new THREE.BoxGeometry(.6, .12, .6).translate(0, 6.05, 0), matLamp, lamps.length);
   lamps.forEach(([x, z], i) => { m4.compose(new THREE.Vector3(x, groundY(x, z), z), q, new THREE.Vector3(1, 1, 1)); poles.setMatrixAt(i, m4); heads.setMatrixAt(i, m4); addCircle(x, z, .22); });
   poles.castShadow = true; scene.add(poles, heads);
+  lamps.forEach(([x, z]) => LAMPS.push([x, groundY(x, z) + 5.95, z, groundY(x, z)]));
+  { // 中軸: 4 m garden lamps with a round lantern, both sides, every 24 m
+    const spots = []; for (let s = 12; s < AL - 6; s += 24) { const [x, z, tx, tz] = sampleLine(ax.p, s); for (const sg of [-1, 1]) { const px = x - tz * sg * 5.4, pz = z + tx * sg * 5.4; if (!onCarRoad(px, pz, 1) && !occupied(px, pz, -2.5)) spots.push([px, pz]); } }
+    const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(.05, .07, 4, 8).translate(0, 2, 0), matMetal, spots.length), glow = new THREE.InstancedMesh(new THREE.SphereGeometry(.22, 12, 8).translate(0, 4.1, 0), matLamp, spots.length);
+    spots.forEach(([x, z], i) => { m4.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(1, 1, 1)); post.setMatrixAt(i, m4); glow.setMatrixAt(i, m4); addCircle(x, z, .15); LAMPS.push([x, 4.1, z, 0]); });
+    scene.add(post, glow);
+  }
   // red emergency call posts (numbered) along the main roads
   let num = 1;
   for (const name of ['東校區外環道', '西校區西環道', '西校區宿舍區道路', '大學橋→東校區 西緣道路(沿國道)']) {
@@ -2841,7 +2890,7 @@ const LINES = {
   annoyed: ['你很閒欸…', '還有事嗎？', '好啦好啦，我要去上課了！'],
 };
 const EGGS = new Set(), EGG_TOTAL = 4;
-function egg(id, msg) { if (EGGS.has(id)) return; EGGS.add(id); toast(`彩蛋 ${EGGS.size}/${EGG_TOTAL}：${msg}`); if (EGGS.size === EGG_TOTAL) setTimeout(() => toast('全部彩蛋達成！你是高科大校園通'), 2600); if (navigator.vibrate) navigator.vibrate([30, 40, 30]); }
+function egg(id, msg) { if (EGGS.has(id)) return; EGGS.add(id); toast(`彩蛋 ${EGGS.size}/${EGG_TOTAL}：${msg}`); if (EGGS.size === EGG_TOTAL) setTimeout(() => toast('全部彩蛋達成！你是高科大校園通'), 2600); vib([30, 40, 30]); }
 
 /* speech bubbles: DOM labels projected above heads */
 const bubbleLayer = document.createElement('div'); bubbleLayer.id = 'bubbles'; document.body.appendChild(bubbleLayer);
@@ -2948,7 +2997,7 @@ function ghostTick(dt) {
   }
   if (ghost) {
     ghost.t += dt; ghost.strum -= dt;
-    if (ghost.strum <= 0 && actx && !muted) { ghost.strum = rr(.5, .9); const t = actx.currentTime, gn = actx.createGain(); gn.gain.setValueAtTime(.05, t); gn.gain.exponentialRampToValueAtTime(.001, t + 1.2); gn.connect(actx.destination); for (const f of pick([[196, 247, 294], [220, 262, 330], [175, 220, 262]])) { const o = actx.createOscillator(); o.type = 'triangle'; o.frequency.value = f; o.connect(gn); o.start(t + rnd() * .03); o.stop(t + 1.2); } }
+    if (ghost.strum <= 0 && actx && !muted) { ghost.strum = rr(.5, .9); const t = actx.currentTime, gn = actx.createGain(); gn.gain.setValueAtTime(.05, t); gn.gain.exponentialRampToValueAtTime(.001, t + 1.2); gn.connect(masterOut); for (const f of pick([[196, 247, 294], [220, 262, 330], [175, 220, 262]])) { const o = actx.createOscillator(); o.type = 'triangle'; o.frequency.value = f; o.connect(gn); o.start(t + rnd() * .03); o.stop(t + 1.2); } }
     const d = Math.hypot(ghost.g.position.x - p.x, ghost.g.position.z - p.z);
     if (d < 3 || !inside) { scene.remove(ghost.g); if (d < 3) egg('ghost', '……剛剛彈吉他的那個人是誰？'); ghost = null; }
   }
@@ -2972,7 +3021,7 @@ const hhmm = m => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(
 function bell() { // Westminster chime
   if (!actx || muted) return;
   const t0 = actx.currentTime + .05, notes = [330, 262, 294, 196, 196, 294, 330, 262];
-  notes.forEach((f, i) => { const t = t0 + i * .55 + (i >= 4 ? .4 : 0), o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f * 2.01; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); o.connect(g); o2.connect(g); g.connect(actx.destination); o.start(t); o2.start(t); o.stop(t + 1.7); o2.stop(t + 1.7); });
+  notes.forEach((f, i) => { const t = t0 + i * .55 + (i >= 4 ? .4 : 0), o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f * 2.01; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + 1.6); o.connect(g); o2.connect(g); g.connect(masterOut); o.start(t); o2.start(t); o.stop(t + 1.7); o2.stop(t + 1.7); });
 }
 const LIFE_LINES = {
   teach: ['同學請坐好，我們開始上課', '這題期中考會考喔', '後面的同學聽得到嗎？', '手機先收起來', '我們翻到第 87 頁', '有沒有問題？沒有的話我們繼續', '這個觀念很重要，請記下來', '下禮拜交報告喔'],
@@ -3044,7 +3093,7 @@ function lifePopulate(I, k, sch) {
 function lifeTick(dt, force) {
   if (!started && !force) return;
   // clock
-  if (!isNight) { gameMin += dt * .5; if (gameMin >= 17 * 60 + 40) gameMin = 7 * 60 + 50; } else gameMin = Math.max(gameMin, 21 * 60 + 40) + dt * .2;
+  if (timeMode === 'day') { gameMin += dt * .5; if (gameMin >= 17 * 60 + 40) gameMin = 7 * 60 + 50; } else if (timeMode === 'dusk') gameMin = Math.min(17 * 60 + 59, Math.max(gameMin, 17 * 60 + 20) + dt * .2); else gameMin = Math.max(gameMin, 21 * 60 + 40) + dt * .2;
   const sch = schedule();
   $('clockT').textContent = hhmm(gameMin); $('clockD').textContent = sch.label + (sch.left && sch.left <= 10 && sch.phase === 'break' ? ` ${Math.ceil(sch.left)}′` : '');
   if (lastPhase && sch.phase !== lastPhase && (sch.phase === 'class' || lastPhase === 'class') && gameMin - lastBellMin > 3) { bell(); lastBellMin = gameMin; toast(sch.phase === 'class' ? `上課鐘響・${sch.label.split('・')[0]}` : sch.phase === 'lunch' ? '下課・午休時間' : '下課鐘響'); if (sch.phase === 'class') lateT = 6; }
@@ -3119,7 +3168,7 @@ function actionInfo() {
   return null;
 }
 function doAction() { const a = actionInfo(); if (a) a.go(); }
-function petDog() { say(dog.g, '汪汪！❤', 2, 1.1); dog.follow = 60; if (navigator.vibrate) navigator.vibrate(20); egg('dog', '校狗小黑跟著你走了'); }
+function petDog() { say(dog.g, '汪汪！❤', 2, 1.1); dog.follow = 60; vib(20); egg('dog', '校狗小黑跟著你走了'); }
 function talkTo(p) {
   p.g.rotation.y = Math.atan2(player.pos.x - p.g.position.x, player.pos.z - p.g.position.z);
   player.yaw = Math.atan2(p.g.position.x - player.pos.x, p.g.position.z - player.pos.z);
@@ -3215,10 +3264,13 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 function onPress(code) {
+  const wasOpen = mapOpen || !$('mlist').hidden;
   if (code === 'KeyF' || code === 'KeyE') doAction();
   if (code === 'KeyM' || (code === 'Escape' && mapOpen)) toggleMap();
   if (code === 'KeyJ' || (code === 'Escape' && !$('mlist').hidden)) toggleMissionList();
-  if (code === 'KeyN') { isNight = !isNight; applyTime(); gameMin = isNight ? 21 * 60 + 40 : 10 * 60 + 24; lastPhase = null; toast(isNight ? '夜晚 21:40' : '白天 10:24'); }
+  else if (code === 'Escape' && !wasOpen) toggleSettings();
+  if (code === 'KeyN') setTimeMode({ day: 'dusk', dusk: 'night', night: 'day' }[timeMode]);
+  if (code === 'KeyY') setRain(!raining);
   if (code === 'KeyG') { const order = ['low', 'mid', 'high'], q = order[(order.indexOf(QL) + 1) % 3]; applyQuality(q); toast(`畫質：${QUALITY[q].name}${q === 'high' && !renderer.getContextAttributes().antialias ? '（重新整理後反鋸齒才會生效）' : ''}`); }
   if (code === 'KeyL') { lightsOn = !lightsOn; toast(lightsOn ? '大燈 開' : '大燈 關'); }
   if (code === 'KeyH') horn();
@@ -3232,7 +3284,7 @@ cvs.addEventListener('mousedown', () => { if (!started || mapOpen) return; dragg
 addEventListener('mouseup', () => dragging = false);
 addEventListener('mousemove', e => {
   if (!started || mapOpen) return;
-  if (document.pointerLockElement === cvs || dragging) { camYaw -= e.movementX * .0025; camPitch = clamp(camPitch + e.movementY * .002, -.25, 1.25); lastMouse = performance.now() / 1000; }
+  if (document.pointerLockElement === cvs || dragging) { camYaw -= e.movementX * .0025 * SET.sens; camPitch = clamp(camPitch + e.movementY * .002 * SET.sens, -.25, 1.25); lastMouse = performance.now() / 1000; }
 });
 addEventListener('wheel', e => { if (started && !mapOpen) camDist = clamp(camDist + Math.sign(e.deltaY) * .6, 2.2, 14); }, { passive: true });
 
@@ -3247,19 +3299,18 @@ function exitFull() { try { (document.exitFullscreen || document.webkitExitFulls
 if (isTouch) {
   document.body.classList.add('touch');
   const joy = $('joy'), knob = $('knob'), zoneEl = $('joyzone'); let jid = null, cid = null, cx0 = 0, cy0 = 0, jx = 0, jy = 0;
-  const R = 64;
-  zoneEl.addEventListener('touchstart', e => { const t = e.changedTouches[0]; jid = t.identifier; jx = t.clientX; jy = t.clientY; joy.style.left = (jx - R) + 'px'; joy.style.top = (jy - R) + 'px'; joy.style.bottom = 'auto'; joy.classList.add('on'); e.preventDefault(); moveJoy(t); }, { passive: false });
-  const moveJoy = t => { let dx = t.clientX - jx, dy = t.clientY - jy; const d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; } knob.style.transform = `translate(${dx}px,${dy}px)`; touch.x = dx / R; touch.y = -dy / R; touch.active = true; };
-  addEventListener('touchmove', e => { for (const t of e.changedTouches) { if (t.identifier === jid) moveJoy(t); else if (t.identifier === cid) { camYaw -= (t.clientX - cx0) * .007; camPitch = clamp(camPitch + (t.clientY - cy0) * .005, -.25, 1.25); cx0 = t.clientX; cy0 = t.clientY; lastMouse = performance.now() / 1000; } } }, { passive: true });
+  zoneEl.addEventListener('touchstart', e => { const R = 64 * SET.joy, t = e.changedTouches[0]; jid = t.identifier; jx = t.clientX; jy = t.clientY; joy.style.left = (jx - R) + 'px'; joy.style.top = (jy - R) + 'px'; joy.style.bottom = 'auto'; joy.classList.add('on'); e.preventDefault(); moveJoy(t); }, { passive: false });
+  const moveJoy = t => { const R = 64 * SET.joy; let dx = t.clientX - jx, dy = t.clientY - jy; const d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; } knob.style.transform = `translate(${dx}px,${dy}px)`; touch.x = dx / R; touch.y = -dy / R; touch.active = true; };
+  addEventListener('touchmove', e => { for (const t of e.changedTouches) { if (t.identifier === jid) moveJoy(t); else if (t.identifier === cid) { camYaw -= (t.clientX - cx0) * .007 * SET.sens; camPitch = clamp(camPitch + (t.clientY - cy0) * .005 * SET.sens, -.25, 1.25); cx0 = t.clientX; cy0 = t.clientY; lastMouse = performance.now() / 1000; } } }, { passive: true });
   const endT = e => { for (const t of e.changedTouches) { if (t.identifier === jid) { jid = null; touch.x = touch.y = 0; touch.active = false; knob.style.transform = ''; joy.classList.remove('on'); joy.style.left = ''; joy.style.top = ''; joy.style.bottom = ''; } if (t.identifier === cid) cid = null; } };
   addEventListener('touchend', endT); addEventListener('touchcancel', endT);
   cvs.addEventListener('touchstart', e => { const t = e.changedTouches[0]; if (cid === null) { cid = t.identifier; cx0 = t.clientX; cy0 = t.clientY; } }, { passive: true });
   document.querySelectorAll('#touch .tb[data-k]').forEach(b => {
     const k = b.dataset.k;
-    b.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; b.classList.add('held'); onPress(k); if (navigator.vibrate) navigator.vibrate(8); }, { passive: false });
+    b.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; b.classList.add('held'); onPress(k); vib(8); }, { passive: false });
     const up = () => { keys[k] = false; b.classList.remove('held'); }; b.addEventListener('touchend', up); b.addEventListener('touchcancel', up);
   });
-  $('act').addEventListener('touchstart', e => { e.preventDefault(); doAction(); if (navigator.vibrate) navigator.vibrate(15); }, { passive: false });
+  $('act').addEventListener('touchstart', e => { e.preventDefault(); doAction(); vib(15); }, { passive: false });
   const bf = $('bFull'); if (!canFull) bf.hidden = true;
   bf.addEventListener('touchstart', e => { e.preventDefault(); if (document.fullscreenElement || document.webkitFullscreenElement) exitFull(); else goFull(); }, { passive: false });
   const rot = () => { $('rotate').hidden = !(started && innerHeight > innerWidth * 1.05); };
@@ -3269,7 +3320,7 @@ if (isTouch) {
 $('act').addEventListener('click', () => doAction());
 let lastAct = '';
 function updateTouchUI() {
-  if (!isTouch || !started) return;
+  if (!isTouch || !started || document.body.classList.contains('editing')) return;
   const a = actionInfo(), act = $('act'), lbl = a ? a.label : '';
   if (lbl !== lastAct) { lastAct = lbl; act.hidden = !a; if (a) { act.textContent = lbl; act.style.animation = 'none'; void act.offsetWidth; act.style.animation = ''; } }
   const inV = !!player.vehicle;
@@ -3283,13 +3334,14 @@ function axes() {
 }
 
 /* ================= audio ================= */
-let actx = null, eng = null, muted = false;
+let actx = null, eng = null, muted = false, masterOut = null;
 function initAudio() {
   try {
     actx = new (window.AudioContext || window.webkitAudioContext)();
+    masterOut = actx.createGain(); masterOut.gain.value = SET.vol.master; masterOut.connect(masterOut);
     const o1 = actx.createOscillator(), o2 = actx.createOscillator(), f = actx.createBiquadFilter(), g = actx.createGain();
     o1.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 600; g.gain.value = 0;
-    o1.connect(f); o2.connect(f); f.connect(g); g.connect(actx.destination); o1.start(); o2.start();
+    o1.connect(f); o2.connect(f); f.connect(g); g.connect(masterOut); o1.start(); o2.start();
     eng = { o1, o2, f, g };
     $('sound').hidden = false;
   } catch (e) { actx = null; }
@@ -3331,8 +3383,8 @@ function hornStart(type) {
   node.connect(out);
   // a little outdoor slap-back off the buildings
   const dly = actx.createDelay(.5), dg = actx.createGain(); dly.delayTime.value = .07; dg.gain.value = .12; node.connect(dly); dly.connect(dg); dg.connect(out);
-  const vol = car ? .16 : .11;
-  out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(vol, t + .012); out.connect(actx.destination);
+  const vol = (car ? .16 : .11) * SET.vol.horn;
+  out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(vol, t + .012); out.connect(masterOut);
   hornV = { out, oscs, t0: t, vol };
 }
 function hornStop() {
@@ -3348,8 +3400,58 @@ function bikeBell() {
   for (const t0 of [0, .17]) for (const [f, a, d] of [[2380, .08, 1.1], [2380 * 2.76, .035, .5], [2380 * 5.4, .015, .25], [2380 * 1.52, .02, .7]]) {
     const o = actx.createOscillator(), g = actx.createGain(); o.type = 'sine'; o.frequency.value = f;
     g.gain.setValueAtTime(0, t + t0); g.gain.linearRampToValueAtTime(a, t + t0 + .003); g.gain.exponentialRampToValueAtTime(.0005, t + t0 + d);
-    o.connect(g); g.connect(actx.destination); o.start(t + t0); o.stop(t + t0 + d + .05);
+    o.connect(g); g.connect(masterOut); o.start(t + t0); o.stop(t + t0 + d + .05);
   }
+}
+
+/* ================= night lights & rain =================
+   Every lamp throws a soft pool of light on the ground (one instanced additive disc each); the few lamps nearest
+   the player also get a real point light, so cars and people passing under them are lit. Rain: streaks falling
+   in a box that follows the camera, plus a filtered-noise hiss. */
+let lightPools = null; const lampLights = [];
+function setupNightLights() {
+  const tex = canvasTex(128, 128, (g, w, h) => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,220,160,1)'); gr.addColorStop(.3, 'rgba(255,200,125,0.6)'); gr.addColorStop(.65, 'rgba(255,190,110,0.18)'); gr.addColorStop(1, 'rgba(255,190,110,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4 });
+  lightPools = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, LAMPS.length);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+  LAMPS.forEach(([x, y, z, g0], i) => { const r = Math.min(16, (y - g0) * 2.6); m4.compose(new THREE.Vector3(x, g0 + .08, z), q, new THREE.Vector3(r, 1, r)); lightPools.setMatrixAt(i, m4); });
+  lightPools.frustumCulled = false; lightPools.renderOrder = 2; scene.add(lightPools);
+  for (let i = 0; i < 6; i++) { const l = new THREE.PointLight(0xffc98a, 0, 22, 1.6); l.castShadow = false; scene.add(l); lampLights.push(l); }
+  nightLightsApply();
+}
+function nightLightsApply() { if (lightPools) lightPools.visible = lampsOn(); lampTimer = 0; }
+let lampTimer = 0;
+function nightLightsTick(dt) {
+  if (!lightPools) return;
+  const on = lampsOn(), n = on ? (QL === 'high' ? 6 : QL === 'mid' ? 3 : 0) : 0;
+  if ((lampTimer -= dt) > 0) return; lampTimer = .4;
+  const p = player.vehicle ? player.vehicle.pos : player.pos;
+  const near = LAMPS.map(L => [L, (L[0] - p.x) ** 2 + (L[2] - p.z) ** 2]).sort((a, b) => a[1] - b[1]).slice(0, n);
+  lampLights.forEach((l, i) => { const L = near[i]; if (L) { l.position.set(L[0][0], L[0][1] - .3, L[0][2]); l.intensity = isNight ? 110 : 45; } else l.intensity = 0; });
+}
+let rainMesh = null, rainSnd = null;
+function setupRain() {
+  const N = 2400, pos = new Float32Array(N * 6), g = new THREE.BufferGeometry();
+  for (let i = 0; i < N; i++) { const x = rr(-30, 30), y = rr(0, 26), z = rr(-30, 30); pos.set([x, y, z, x + .05, y - .7, z + .05], i * 6); }
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  rainMesh = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xc9d6e2, transparent: true, opacity: .45, depthWrite: false }));
+  rainMesh.frustumCulled = false; rainMesh.visible = false; scene.add(rainMesh);
+}
+let rainOff = 0;
+function rainTick(dt) {
+  if (!rainMesh) return;
+  rainMesh.visible = raining;
+  if (raining) {
+    rainOff = (rainOff + dt * 22) % 26; const c = camera.position, n = QL === 'low' ? 800 : QL === 'mid' ? 1600 : 2400;
+    rainMesh.geometry.setDrawRange(0, n * 2); rainMesh.position.set(Math.round(c.x / 2) * 2, c.y - 10 - rainOff + 13, Math.round(c.z / 2) * 2);
+    if (rainMesh.position.y < c.y - 23) rainMesh.position.y += 26;
+  }
+  if (actx && raining && !rainSnd) { // looped filtered noise
+    const len = actx.sampleRate * 2, buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = actx.createBufferSource(); src.buffer = buf; src.loop = true; const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2400; bp.Q.value = .5; const gn = actx.createGain(); gn.gain.value = 0;
+    src.connect(bp); bp.connect(gn); gn.connect(masterOut); src.start(); rainSnd = gn;
+  }
+  if (rainSnd) rainSnd.gain.value = raining && !muted ? .05 * SET.vol.amb : 0;
 }
 
 /* ================= campus missions =================
@@ -3420,15 +3522,15 @@ function startMission(m) {
   if (MS) return;
   MS = { m, step: 0, t: 0, seen: new Set() };
   toast(`任務開始：${m.title}`, 3); say(player.g, m.intro.slice(0, 22) + (m.intro.length > 22 ? '…' : ''), 3);
-  $('mlist').hidden = true; updateMissionUI(); if (navigator.vibrate) navigator.vibrate(30);
+  $('mlist').hidden = true; updateMissionUI(); vib(30);
 }
 function endMission(ok, why) {
   const m = MS.m, t = MS.t; MS = null;
   if (ok) {
     const best = missionSave[m.id]; missionSave[m.id] = { best: best ? Math.min(best.best, t) : t }; saveMissions();
     toast(`任務完成！${m.title}　${fmtT(t)}　＋${m.reward} 學分${best && t < best.best ? '　新紀錄！' : ''}`, 4.5);
-    if (actx && !muted) { const a = actx.currentTime; [523, 659, 784, 1047].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(.08, a + i * .12); g.gain.exponentialRampToValueAtTime(.001, a + i * .12 + .4); o.connect(g); g.connect(actx.destination); o.start(a + i * .12); o.stop(a + i * .12 + .45); }); }
-    if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
+    if (actx && !muted) { const a = actx.currentTime; [523, 659, 784, 1047].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(.08, a + i * .12); g.gain.exponentialRampToValueAtTime(.001, a + i * .12 + .4); o.connect(g); g.connect(masterOut); o.start(a + i * .12); o.stop(a + i * .12 + .45); }); }
+    vib([40, 50, 40]);
   } else toast(`任務失敗：${why}`, 3.5);
   updateMissionUI();
 }
@@ -3568,8 +3670,8 @@ function driveVehicle(v, dt, inp) {
   if (!car) v.lean = lerp(v.lean, clamp(-yaw * Math.abs(v.speed) * .045, -.45, .45), 1 - Math.exp(-6 * dt));
   for (const w of v.wheels) { w.spin.rotation.x += v.speed * dt / (car ? .34 : .26); if (w.front) w.pivot.rotation.y = v.steer; }
   if (v.bar) v.bar.rotation.y = v.steer * .8;
-  v.tailM.emissiveIntensity = v.braking ? 2.2 : (isNight || (lightsOn && v === player.vehicle) ? .9 : .25);
-  v.headM.emissiveIntensity = (isNight || lightsOn) && (v === player.vehicle || v.npc) ? 3 : .05;
+  v.tailM.emissiveIntensity = v.braking ? 2.2 : (lampsOn() || (lightsOn && v === player.vehicle) ? .9 : .25);
+  v.headM.emissiveIntensity = (lampsOn() || lightsOn) && (v === player.vehicle || v.npc) ? 3 : .05;
   syncVehicle(v);
 }
 /* pedal power instead of a throttle: ~4 W/kg (fit student) against air drag and the slope, so the 6.7 % bridge
@@ -3596,8 +3698,8 @@ function rideBike(v, dt, inp) {
   if (inp.fwd && v.speed > 0) v.crankA += v.speed * dt / (.34 * 2.4) + dt * .8; // pedalling (2.4 m per crank turn, plus a little effort uphill)
   v.crank.rotation.x = v.crankA;
   if (v === player.vehicle) animHuman(player.g, v.crankA, 1, 'bike');
-  v.tailM.emissiveIntensity = v.braking ? 1.6 : (isNight || (lightsOn && v === player.vehicle) ? .9 : .25);
-  v.headM.emissiveIntensity = (isNight || lightsOn) && v === player.vehicle ? 2 : .05;
+  v.tailM.emissiveIntensity = v.braking ? 1.6 : (lampsOn() || (lightsOn && v === player.vehicle) ? .9 : .25);
+  v.headM.emissiveIntensity = (lampsOn() || lightsOn) && v === player.vehicle ? 2 : .05;
   syncVehicle(v);
 }
 function moveVehicle(v, dt) {
@@ -3715,7 +3817,7 @@ function updateCamera(dt) {
     const behind = v.speed > 0 ? v.heading + Math.PI : camYaw;
     camYaw += wrapA(behind - camYaw) * (1 - Math.exp(-2.6 * dt));
   }
-  let dist = camDist + (v ? Math.abs(v.speed) * .06 : 0);
+  let dist = camDist * SET.cam + (v ? Math.abs(v.speed) * .06 : 0);
   const dir = new THREE.Vector3(Math.sin(camYaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(camYaw) * Math.cos(camPitch));
   ray.set(camTarget, dir); ray.far = dist + .5;
   const hit = ray.intersectObjects(blockers, false)[0];
@@ -3732,25 +3834,41 @@ function updateCamera(dt) {
 
 /* ================= time of day ================= */
 const stars = (() => { const g = new THREE.BufferGeometry(), a = []; for (let i = 0; i < 1600; i++) { const u = rnd() * 6.28, v = rr(.05, 1); const r = 4200; a.push(Math.cos(u) * Math.sqrt(1 - v * v) * r, v * r, Math.sin(u) * Math.sqrt(1 - v * v) * r); } g.setAttribute('position', new THREE.Float32BufferAttribute(a, 3)); const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, fog: false, transparent: true, opacity: .85 })); p.visible = false; scene.add(p); return p; })();
+/* time of day (day / dusk / night, N cycles) and weather (rain, Y) */
+const lampsOn = () => timeMode !== 'day' || raining;
+function setTimeMode(m) { timeMode = m; applyTime(); gameMin = m === 'night' ? 21 * 60 + 40 : m === 'dusk' ? 17 * 60 + 20 : 10 * 60 + 24; lastPhase = null; toast({ day: '白天 10:24', dusk: '黃昏 17:20', night: '夜晚 21:40' }[m]); saveSettings(); }
+function setRain(v) { raining = v; applyTime(); toast(v ? '下雨了' : '雨停了'); saveSettings(); }
 function applyTime() {
-  const elev = isNight ? -6 : 42, az = isNight ? 250 : 125;
+  isNight = timeMode === 'night';
+  const dusk = timeMode === 'dusk', elev = isNight ? -6 : dusk ? 5 : 42, az = isNight ? 250 : dusk ? 262 : 125;
   const sd = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - elev), THREE.MathUtils.degToRad(az));
   su.sunPosition.value.copy(sd);
+  su.turbidity.value = raining ? 14 : dusk ? 9 : 7; su.rayleigh.value = raining ? .6 : dusk ? 2.6 : 1.5;
   if (isNight) {
-    lightDir.set(-.35, .85, .4).normalize(); sun.intensity = .35; sun.color.set(0x9db2ff); hemi.intensity = .28; hemi.color.set(0x48609a); hemi.groundColor.set(0x14181c);
-    renderer.toneMappingExposure = .62; scene.fog.color.set(0x0b0f1c); scene.fog.near = Math.min(200, Q.fogN); scene.fog.far = Math.min(1600, Q.fogF); scene.environmentIntensity = .25; stars.visible = true;
+    lightDir.set(-.35, .85, .4).normalize(); sun.intensity = .45; sun.color.set(0x9db2ff); hemi.intensity = .42; hemi.color.set(0x48609a); hemi.groundColor.set(0x14181c);
+    renderer.toneMappingExposure = .62; scene.fog.color.set(0x0b0f1c); scene.fog.near = Math.min(200, Q.fogN); scene.fog.far = Math.min(1600, Q.fogF); scene.environmentIntensity = .25; stars.visible = !raining;
+  } else if (dusk) {
+    lightDir.copy(sd).setY(.25).normalize(); sun.intensity = 1.6; sun.color.set(0xffa560); hemi.intensity = .55; hemi.color.set(0xf0b48a); hemi.groundColor.set(0x3a3a2a);
+    renderer.toneMappingExposure = .55; scene.fog.color.set(0xd99a72); scene.fog.near = Q.fogN * .7; scene.fog.far = Q.fogF * .8; scene.environmentIntensity = .6; stars.visible = false;
   } else {
     lightDir.copy(sd); sun.intensity = 3.2; sun.color.set(0xfff0d8); hemi.intensity = 1.0; hemi.color.set(0xd6e8ff); hemi.groundColor.set(0x55663a);
     renderer.toneMappingExposure = .5; scene.fog.color.set(0xbfd3e0); scene.fog.near = Q.fogN; scene.fog.far = Q.fogF; scene.environmentIntensity = 1; stars.visible = false;
   }
-  for (const m of winMats) m.emissiveIntensity = isNight ? 1.4 : 0;
-  matLamp.emissiveIntensity = isNight ? 6 : 0;
+  if (raining) { // overcast: no hard sun, grey haze closing in, wet (shinier) asphalt
+    sun.intensity *= .3; hemi.intensity *= isNight ? 1 : .8; hemi.color.set(isNight ? 0x3a4660 : 0x9aa4ad);
+    scene.fog.color.set(isNight ? 0x10141c : dusk ? 0x7a6f6a : 0x8f979c); scene.fog.near = Math.min(scene.fog.near, 60); scene.fog.far = Math.min(scene.fog.far, 520);
+    renderer.toneMappingExposure *= isNight ? 1 : .9;
+  }
+  matAsphalt.roughness = raining ? .38 : .92; matAsphalt.metalness = raining ? .25 : 0;
+  for (const m of winMats) m.emissiveIntensity = isNight ? 1.4 : timeMode === 'dusk' ? .7 : raining ? .35 : 0;
+  matLamp.emissiveIntensity = isNight ? 6 : lampsOn() ? 4 : 0;
+  if (typeof nightLightsApply === 'function') nightLightsApply();
   const es = new THREE.Scene(); const s2 = new Sky(); s2.scale.setScalar(1000);
   for (const k of ['turbidity', 'rayleigh', 'mieCoefficient', 'mieDirectionalG']) s2.material.uniforms[k].value = su[k].value;
   s2.material.uniforms.sunPosition.value.copy(sd); es.add(s2);
   if (envRT) envRT.dispose(); envRT = pmrem.fromScene(es); scene.environment = envRT.texture;
-  $('clockT').textContent = isNight ? '21:40' : '10:24';
-  $('clockD').textContent = isNight ? '燕巢・夜' : '燕巢・晴 29°C';
+  $('clockT').textContent = isNight ? '21:40' : timeMode === 'dusk' ? '17:20' : '10:24';
+  $('clockD').textContent = (isNight ? '燕巢・夜' : timeMode === 'dusk' ? '燕巢・黃昏' : '燕巢') + (raining ? '・雨' : isNight ? '' : '・晴 29°C');
 }
 
 /* ================= HUD: zone, prompt, minimap, big map ================= */
@@ -3877,9 +3995,10 @@ function loop(now) {
     updateInteriorVis();
     updateZone(dt);
     if (player.vehicle) $('spd').textContent = Math.round(Math.abs(player.vehicle.speed) * 3.6);
-    headlight.intensity = player.vehicle && (lightsOn || isNight) ? 180 : 0;
+    headlight.intensity = player.vehicle && (lightsOn || lampsOn()) ? 180 : 0;
+    nightLightsTick(dt); rainTick(dt);
     if (eng && player.vehicle && player.vehicle.type === 'bike') eng.g.gain.value = 0;
-    else if (eng && player.vehicle) { const v = player.vehicle, r = Math.abs(v.speed) / VMAX[v.type]; const base = v.type === 'car' ? 38 : 70; const gear = v.type === 'car' ? (r * 5) % 1 : r; eng.o1.frequency.value = base + gear * base * 2.2 + r * 40; eng.o2.frequency.value = eng.o1.frequency.value * .502; eng.f.frequency.value = 300 + r * 1400; eng.g.gain.value = muted ? 0 : .035 + r * .03; }
+    else if (eng && player.vehicle) { const v = player.vehicle, r = Math.abs(v.speed) / VMAX[v.type]; const base = v.type === 'car' ? 38 : 70; const gear = v.type === 'car' ? (r * 5) % 1 : r; eng.o1.frequency.value = base + gear * base * 2.2 + r * 40; eng.o2.frequency.value = eng.o1.frequency.value * .502; eng.f.frequency.value = 300 + r * 1400; eng.g.gain.value = muted ? 0 : (.035 + r * .03) * SET.vol.engine; }
     drawMini();
     if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('on'); }
   } else {
@@ -3944,16 +4063,49 @@ async function boot() {
   for (const b of SURVEY.bld) buildBuilding(b);
   buildLots(); buildSports(); buildGates(); buildBoundary(); buildFurniture();
   buildSpecials(); planTrees(); buildTrees(); buildPaint();
-  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs(); setupMissions();
+  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs(); setupMissions(); setupNightLights(); setupRain();
   const A = BUILT.find(b => b.name === '行政大樓'), E = A.entrance;
   SPAWN.x = E.x + E.nx * 14; SPAWN.z = E.z + E.nz * 14; SPAWN.yaw = Math.atan2(-E.nx, -E.nz);
   player.pos.set(SPAWN.x, standY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw;
   player.g = makeHuman({ shirt: 0x1d1d1f, pants: 0x31456b, skin: 0xd9a77f, bag: 0x24324a, shoe: 0xf2f2ee }); scene.add(player.g);
   player.g.position.copy(player.pos);
-  applyTime(); drawMapBase(); drawMini();
+  timeMode = SET.time || 'day'; raining = !!SET.rain; applyTime(); drawMapBase(); drawMini(); applyLayout();
   const go = $('go'); go.disabled = false; go.textContent = '開始遊戲'; go.focus();
   requestAnimationFrame(loop);
 }
+/* ---------- settings menu ---------- */
+const getPath = k => k.split('.').reduce((o, p) => o[p], SET), setPath = (k, v) => { const ps = k.split('.'), last = ps.pop(); ps.reduce((o, p) => o[p], SET)[last] = v; };
+function refreshSettings() {
+  const cur = { quality: QL, time: timeMode, rain: raining ? '1' : '0', vibrate: SET.vibrate ? '1' : '0' };
+  document.querySelectorAll('#settings .seg').forEach(g => g.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === cur[g.dataset.set])));
+  document.querySelectorAll('#settings input[type=range]').forEach(r => { r.value = getPath(r.dataset.set); r.nextElementSibling.textContent = Math.round(r.value * 100) + '%'; });
+}
+function toggleSettings(force) { const el = $('settings'); el.hidden = force !== undefined ? !force : !el.hidden; if (!el.hidden) { if (document.pointerLockElement) document.exitPointerLock(); refreshSettings(); } }
+document.querySelectorAll('#settings .seg').forEach(g => g.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const v = b.dataset.v, k = g.dataset.set;
+  if (k === 'quality') applyQuality(v); else if (k === 'time') setTimeMode(v); else if (k === 'rain') setRain(v === '1'); else if (k === 'vibrate') { SET.vibrate = v === '1'; saveSettings(); }
+  refreshSettings(); }));
+document.querySelectorAll('#settings input[type=range]').forEach(r => r.addEventListener('input', () => { setPath(r.dataset.set, +r.value); r.nextElementSibling.textContent = Math.round(r.value * 100) + '%';
+  if (r.dataset.set === 'vol.master' && masterOut) masterOut.gain.value = SET.vol.master; applyLayout(); saveSettings(); }));
+$('setClose').addEventListener('click', () => toggleSettings(false)); $('setb').addEventListener('click', () => toggleSettings(true));
+/* phone controls: size + drag-to-place (positions saved as offsets) */
+const LAYOUT_IDS = ['act', 'tbtns', 'ttop', 'mini'];
+function applyLayout() {
+  const j = $('joy'); if (j) { j.style.width = j.style.height = 128 * SET.joy + 'px'; const k = $('knob'), ks = 52 * SET.joy; k.style.width = k.style.height = ks + 'px'; k.style.left = k.style.top = (128 * SET.joy - ks) / 2 + 'px'; }
+  const tb = $('tbtns'); if (tb) { tb.style.gridTemplateColumns = `repeat(2,${68 * SET.btn}px)`; tb.querySelectorAll('.tb').forEach(b => { b.style.height = 68 * SET.btn + 'px'; b.style.fontSize = 14 * SET.btn + 'px'; }); }
+  const a = $('act'); if (a) a.style.scale = SET.btn;
+  for (const id of LAYOUT_IDS) { const el = $(id), o = SET.layout[id]; if (el && isTouch) el.style.translate = o ? `${o[0]}px ${o[1]}px` : ''; }
+}
+let editing = null;
+$('editLayout').addEventListener('click', () => {
+  toggleSettings(false); document.body.classList.add('editing'); $('act').hidden = false; if (!$('act').textContent) $('act').textContent = '上車';
+  const layer = document.createElement('div'); layer.id = 'editlayer'; const bar = document.createElement('div'); bar.id = 'editbar'; bar.textContent = '拖曳按鈕到想要的位置　·　完成點這裡'; document.body.append(layer, bar);
+  let drag = null;
+  layer.addEventListener('touchstart', e => { const t = e.changedTouches[0]; for (const id of LAYOUT_IDS) { const r = $(id).getBoundingClientRect(); if (t.clientX >= r.left - 10 && t.clientX <= r.right + 10 && t.clientY >= r.top - 10 && t.clientY <= r.bottom + 10) { const o = SET.layout[id] || [0, 0]; drag = { id, x: t.clientX, y: t.clientY, o: [...o] }; break; } } e.preventDefault(); }, { passive: false });
+  layer.addEventListener('touchmove', e => { if (!drag) return; const t = e.changedTouches[0]; SET.layout[drag.id] = [drag.o[0] + t.clientX - drag.x, drag.o[1] + t.clientY - drag.y]; applyLayout(); e.preventDefault(); }, { passive: false });
+  layer.addEventListener('touchend', () => { drag = null; saveSettings(); });
+  bar.addEventListener('click', () => { layer.remove(); bar.remove(); document.body.classList.remove('editing'); lastAct = null; saveSettings(); });
+});
+$('resetLayout').addEventListener('click', () => { SET.layout = {}; SET.joy = SET.btn = 1; applyLayout(); saveSettings(); refreshSettings(); });
 document.querySelectorAll('.qbtn').forEach(b => b.addEventListener('click', () => {
   const q = b.dataset.q, ca = renderer.getContextAttributes(), needAA = q === 'high', needLog = q !== 'low';
   applyQuality(q);
