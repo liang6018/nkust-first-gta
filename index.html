@@ -29,7 +29,7 @@ body{margin:0;background:var(--ink);color:var(--paper);font-family:var(--f-ui);o
 .hud{position:fixed;pointer-events:none;z-index:5;}
 .stroke{text-shadow:0 0 1px #000,1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,2px 3px 6px rgba(0,0,0,.6);}
 
-#mini{left:max(16px,env(safe-area-inset-left));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:210px;height:210px;border-radius:50%;
+#mini{pointer-events:auto;cursor:pointer;left:max(16px,env(safe-area-inset-left));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:210px;height:210px;border-radius:50%;
   box-shadow:0 0 0 3px rgba(0,0,0,.65),0 0 0 5px var(--line),0 8px 24px rgba(0,0,0,.5);background:#1f2a22;}
 #clock{right:16px;top:calc(14px + env(safe-area-inset-top,0px));text-align:right;}
 #clock .t{font-family:var(--f-num);font-size:44px;line-height:.9;letter-spacing:.02em;}
@@ -61,6 +61,17 @@ body:not(.playing) #setb{visibility:hidden;} body.touch #setb{display:none;}
 #editbar{position:fixed;left:50%;top:calc(52px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:20;background:var(--amber);color:#1a1206;font-weight:900;padding:10px 16px;border-radius:8px;font-size:14px;pointer-events:auto;}
 #editlayer{position:fixed;inset:0;z-index:19;}
 body.editing #touch .tb,body.editing #act,body.editing #mini{outline:2px dashed var(--amber);outline-offset:3px;}
+#mzoom{left:calc(max(16px,env(safe-area-inset-left)) + 214px);bottom:calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;pointer-events:auto;}
+#mzoom button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--glass);color:var(--paper);font-size:16px;font-weight:900;cursor:pointer;}
+body.touch #mzoom{left:calc(134px + env(safe-area-inset-left,0px));top:calc(84px + env(safe-area-inset-top,0px));bottom:auto;flex-direction:row;} body.touch #mzoom button{width:28px;height:28px;}
+#navArrow{left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);text-align:center;color:#3fc46b;} #navArrow .ar{font-size:30px;line-height:1;} #navArrow .d{font-family:var(--f-num);font-size:18px;color:var(--paper);}
+body.touch #navArrow{top:calc(96px + env(safe-area-inset-top,0px));}
+#bigmap .tools{position:absolute;top:calc(40px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:flex-start;z-index:2;}
+#bigmap .tools input{font:inherit;font-size:14px;padding:7px 10px;border-radius:6px;border:1px solid var(--line);background:#141a1f;color:var(--paper);width:180px;}
+#bigmap .tools button{font:inherit;font-size:13px;font-weight:700;padding:7px 10px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--paper);cursor:pointer;}
+#bigmap .tools button.on{background:var(--amber);color:#1a1206;}
+#mapRes{position:absolute;top:36px;left:0;width:200px;max-height:40vh;overflow-y:auto;background:#141a1f;border:1px solid var(--line);border-radius:6px;}
+#mapRes div{padding:7px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line);} #mapRes div:hover{background:rgba(242,169,59,.2);}
 #mission{left:16px;top:calc(14px + env(safe-area-inset-top,0px));max-width:330px;background:var(--glass);border:1px solid var(--line);border-left:4px solid #3fc46b;border-radius:8px;padding:9px 12px;}
 #mission .h{font-size:11px;letter-spacing:.22em;color:#3fc46b;font-weight:700;}
 #mission .t{font-size:18px;font-weight:900;margin:2px 0;}
@@ -130,7 +141,7 @@ body.touch #start .keys{display:none;} body.touch #start .tkeys{display:grid;gri
 #act:active{transform:translateY(3px);box-shadow:0 1px 0 #000;}
 @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 #rotate{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--glass);border:1px solid var(--line);border-radius:8px;padding:10px 16px;font-size:14px;font-weight:700;}
-body.touch #mini{width:118px;height:118px;left:calc(12px + env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));bottom:auto;}
+body.touch #mini{z-index:8;width:118px;height:118px;left:calc(12px + env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px));bottom:auto;}
 body.touch #clock .t{font-size:30px;} body.touch #zone{top:calc(56px + env(safe-area-inset-top,0px));bottom:auto;right:16px;} body.touch #zone .n{font-size:22px;}
 body.touch #speedo{left:50%;right:auto;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));text-align:center;} body.touch #speedo .v{font-size:48px;}
 body.touch #prompt,body.touch #tip{display:none!important;} body.touch #sound{top:calc(50px + env(safe-area-inset-top,0px));bottom:auto;right:auto;left:calc(150px + env(safe-area-inset-left,0px));z-index:8;}
@@ -164,7 +175,9 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
 
 <div id="stage"></div>
 
-<canvas id="mini" class="hud" width="420" height="420"></canvas>
+<canvas id="mini" class="hud" width="420" height="420" title="點小地圖開大地圖"></canvas>
+<div id="mzoom" class="hud"><button type="button" data-z="1.4">＋</button><button type="button" data-z=".71">－</button></div>
+<div id="navArrow" class="hud stroke" hidden><div class="ar">▲</div><div class="d"></div></div>
 <div id="clock" class="hud stroke"><div class="t" id="clockT">10:24</div><div class="d" id="clockD">燕巢・晴</div></div>
 <div id="zone" class="hud stroke"><div class="n" id="zoneN">東校區</div><div class="c" id="zoneC">第一校區</div></div>
 <div id="speedo" class="hud stroke" hidden><div class="k" id="vehName">機車</div><div><span class="v" id="spd">0</span><span class="u">KM/H</span></div></div>
@@ -211,7 +224,7 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
   <div class="row"><kbd>R</kbd>回到行政大樓　<kbd>滾輪</kbd>鏡頭遠近</div>
 </div>
 
-<div id="bigmap" hidden><div class="cap">點擊地圖任一處即可傳送 · 按 M 或 ESC 關閉</div><button type="button" id="mapClose">關閉地圖</button><canvas id="bigc" width="1820" height="940"></canvas></div>
+<div id="bigmap" hidden><div class="cap" id="mapCap">點擊地圖任一處即可傳送 · 按 M 或 ESC 關閉</div><div class="tools"><div style="position:relative"><input id="mapSearch" placeholder="搜尋建築／地點" autocomplete="off"><div id="mapRes" hidden></div></div><button type="button" id="mmTp" class="on">點地圖＝傳送</button><button type="button" id="mmNav">點地圖＝設導航</button><button type="button" id="mmClear">清除導航</button></div><button type="button" id="mapClose">關閉地圖</button><canvas id="bigc" width="1820" height="940"></canvas></div>
 
 <div id="touch" hidden>
   <div id="joyzone"></div>
@@ -223,7 +236,6 @@ body:not(.playing) .hud,body:not(.playing) #sound{visibility:hidden;}
   </div>
   <div id="ttop">
     <button type="button" class="tb sm" data-k="KeyJ">任務</button>
-    <button type="button" class="tb sm" data-k="KeyM">地圖</button>
     <button type="button" class="tb sm" data-k="KeyN">日夜</button>
     <button type="button" class="tb sm" data-k="Escape" id="bSet">設定</button>
     <button type="button" class="tb sm" id="bFull">全螢幕</button>
@@ -3914,8 +3926,10 @@ function drawMapBase() {
   for (const f of mapFills) if (f.code) { const [cx, cz] = centroid(f.pts); g.fillStyle = '#22262a'; g.font = `600 ${44}px Teko, ${FONT}`; g.fillText(f.code, mX(cx), mZ(cz) + 4); }
 }
 const mini = $('mini'), mctx = mini.getContext('2d');
+let miniZoom = 1, miniZoomNow = 1;
 function drawMini() {
-  const W = mini.width, H = mini.height, R = W / 2, k = W / 240;
+  const W = mini.width, H = mini.height, R = W / 2, sp = player.vehicle ? Math.abs(player.vehicle.speed) : 0;
+  miniZoomNow = lerp(miniZoomNow, miniZoom / (1 + sp / 28), .08); const k = W / 240 * miniZoomNow; // zooms out with speed
   const s = player.vehicle ? player.vehicle.pos : player.pos;
   const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw);
   const rot = -Math.PI / 2 - Math.atan2(fz, fx);
@@ -3937,6 +3951,8 @@ function drawMini() {
   const [nx, ny] = toM(s.x, s.z - 1000); const na = Math.atan2(ny - R, nx - R);
   const px = R + Math.cos(na) * (R - 16), py = R + Math.sin(na) * (R - 16);
   mctx.fillStyle = '#0d1114'; mctx.beginPath(); mctx.arc(px, py, 13, 0, 7); mctx.fill(); mctx.fillStyle = '#f6f1e7'; mctx.font = `600 26px Teko, ${FONT}`; mctx.fillText('N', px, py + 2);
+  // navigation route (green) to the mission target / waypoint
+  if (NAV.route && NAV.route.length > 1) { mctx.save(); mctx.beginPath(); mctx.arc(R, R, R - 2, 0, 7); mctx.clip(); mctx.strokeStyle = 'rgba(63,196,107,.95)'; mctx.lineWidth = 6; mctx.lineJoin = mctx.lineCap = 'round'; mctx.beginPath(); NAV.route.forEach(([x, z], i) => { const [mx2, my2] = toM(x, z); i ? mctx.lineTo(mx2, my2) : mctx.moveTo(mx2, my2); }); mctx.stroke(); mctx.restore(); }
   // player arrow
   const h = player.vehicle ? player.vehicle.heading : player.yaw;
   const [ax, ay] = toM(s.x + Math.sin(h), s.z + Math.cos(h)); const aa = Math.atan2(ay - R, ax - R);
@@ -3959,14 +3975,72 @@ function drawBig() {
   bctx.font = `900 22px ${FONT}`; bctx.fillStyle = 'rgba(246,241,231,.85)';
   bctx.fillText('東校區　教學研究區', f(560), g(-120)); bctx.fillText('西校區　運動休憩區', f(-560), g(-180)); bctx.save(); bctx.translate(f(-60), g(-300)); bctx.rotate(-.27); bctx.rotate(-Math.PI / 2); bctx.font = `700 14px ${FONT}`; bctx.fillText('國道一號', 0, 0); bctx.restore();
   for (const mk of missionMarkers()) { bctx.fillStyle = mk.c; bctx.strokeStyle = '#000'; bctx.lineWidth = 3; bctx.beginPath(); bctx.arc(f(mk.x), g(mk.z), 11, 0, 7); bctx.fill(); bctx.stroke(); bctx.fillStyle = '#111'; bctx.font = `900 15px ${FONT}`; bctx.fillText(mk.t, f(mk.x), g(mk.z) + 1); if (mk.label) { bctx.font = `700 12px ${FONT}`; bctx.lineWidth = 3; bctx.strokeStyle = 'rgba(0,0,0,.8)'; bctx.strokeText(mk.label, f(mk.x), g(mk.z) - 18); bctx.fillStyle = '#ffe27a'; bctx.fillText(mk.label, f(mk.x), g(mk.z) - 18); } }
+  if (NAV.route && NAV.route.length > 1) { bctx.strokeStyle = 'rgba(63,196,107,.95)'; bctx.lineWidth = 5; bctx.lineJoin = bctx.lineCap = 'round'; bctx.beginPath(); NAV.route.forEach(([x, z], i) => i ? bctx.lineTo(f(x), g(z)) : bctx.moveTo(f(x), g(z))); bctx.stroke(); }
+  if (NAV.way) { bctx.fillStyle = '#3fc46b'; bctx.strokeStyle = '#000'; bctx.lineWidth = 3; bctx.beginPath(); bctx.arc(f(NAV.way[0]), g(NAV.way[1]), 10, 0, 7); bctx.fill(); bctx.stroke(); }
   const s = player.vehicle ? player.vehicle.pos : player.pos;
   bctx.fillStyle = '#f2a93b'; bctx.strokeStyle = '#000'; bctx.lineWidth = 3; bctx.beginPath(); bctx.arc(f(s.x), g(s.z), 8, 0, 7); bctx.fill(); bctx.stroke();
 }
 function toggleMap() { mapOpen = !mapOpen; $('bigmap').hidden = !mapOpen; if (mapOpen) { if (document.pointerLockElement) document.exitPointerLock(); drawBig(); } }
+/* ---------- navigation: road graph + A* to the mission target or a waypoint ---------- */
+const NAV = { nodes: [], adj: [], route: null, way: null, wayName: '', t: 0, line: null };
+function buildNav() {
+  const N = NAV.nodes, A = NAV.adj, cell = new Map(), key = (x, z) => Math.floor(x / 6) + ',' + Math.floor(z / 6);
+  const add = (x, z) => { N.push([x, z]); A.push([]); const k = key(x, z); if (!cell.has(k)) cell.set(k, []); cell.get(k).push(N.length - 1); return N.length - 1; };
+  const link = (a, b) => { const d = Math.hypot(N[a][0] - N[b][0], N[a][1] - N[b][1]); A[a].push([b, d]); A[b].push([a, d]); };
+  const owner = [];
+  for (const r of ROADS) { if (r.freeway) continue; const pts = subdivide(r.raw, 8); let prev = -1, first = -1; for (const [x, z] of pts) { const i = add(x, z); owner[i] = r; if (prev >= 0) link(prev, i); else first = i; prev = i; } if (r.closed && first >= 0) link(prev, first); }
+  for (let i = 0; i < N.length; i++) { const [x, z] = N[i], gx = Math.floor(x / 6), gz = Math.floor(z / 6); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) for (const j of cell.get((gx + a) + ',' + (gz + b)) || []) if (j > i && owner[j] !== owner[i] && Math.hypot(N[j][0] - x, N[j][1] - z) < 7 && Math.abs(groundY(x, z) - groundY(N[j][0], N[j][1])) < 1.5) link(i, j); }
+  NAV.cell = cell; NAV.key = key;
+  const mat = new THREE.LineBasicMaterial({ color: 0x3fc46b, transparent: true, opacity: .8, depthWrite: false });
+  NAV.line = new THREE.Line(new THREE.BufferGeometry(), mat); NAV.line.frustumCulled = false; NAV.line.renderOrder = 3; scene.add(NAV.line);
+}
+function nearestNode(x, z, r = 80) { let best = -1, bd = r; for (let i = 0; i < NAV.nodes.length; i++) { const d = Math.hypot(NAV.nodes[i][0] - x, NAV.nodes[i][1] - z); if (d < bd) { bd = d; best = i; } } return best; }
+function navRoute(sx, sz, tx, tz) {
+  const s0 = nearestNode(sx, sz), g0 = nearestNode(tx, tz); if (s0 < 0 || g0 < 0) return [[sx, sz], [tx, tz]];
+  const N = NAV.nodes, A = NAV.adj, n = N.length, gs = new Float64Array(n).fill(Infinity), prev = new Int32Array(n).fill(-1), done = new Uint8Array(n), open = [[0, s0]]; gs[s0] = 0;
+  const h = i => Math.hypot(N[i][0] - N[g0][0], N[i][1] - N[g0][1]);
+  while (open.length) { let bi = 0; for (let i = 1; i < open.length; i++) if (open[i][0] < open[bi][0]) bi = i; const [, u] = open.splice(bi, 1)[0]; if (done[u]) continue; done[u] = 1; if (u === g0) break;
+    for (const [v, d] of A[u]) { const ng = gs[u] + d; if (ng < gs[v]) { gs[v] = ng; prev[v] = u; open.push([ng + h(v), v]); } } }
+  if (!isFinite(gs[g0])) return [[sx, sz], [tx, tz]];
+  const path = []; for (let u = g0; u >= 0; u = prev[u]) path.push(N[u]); path.reverse(); return [[sx, sz], ...path, [tx, tz]];
+}
+function navTarget() { if (MS) { const t = curTargets()[0]; return t ? t.at : null; } return NAV.way; }
+function setWaypoint(x, z, name) { NAV.way = [x, z]; NAV.wayName = name || ''; NAV.t = 0; toast(`導航：${name || '標記點'}`); }
+function navTick(dt) {
+  const T = navTarget(), p = player.vehicle ? player.vehicle.pos : player.pos, el = $('navArrow');
+  if (!T) { NAV.route = null; el.hidden = true; if (NAV.line) NAV.line.visible = false; return; }
+  const d = Math.hypot(T[0] - p.x, T[1] - p.z);
+  if (!MS && NAV.way && d < 6) { toast(`已到達：${NAV.wayName || '標記點'}`); NAV.way = null; return; }
+  if ((NAV.t -= dt) <= 0) { NAV.t = 1; NAV.route = navRoute(p.x, p.z, T[0], T[1]);
+    const pts = []; let acc = 0; for (let i = 0; i < NAV.route.length && acc < 160; i++) { const [x, z] = NAV.route[i]; if (i) acc += Math.hypot(x - NAV.route[i - 1][0], z - NAV.route[i - 1][1]); const sub = i ? subdivide([NAV.route[i - 1], [x, z]], 2).slice(1) : [[x, z]]; for (const [sx2, sz2] of sub) pts.push(new THREE.Vector3(sx2, groundY(sx2, sz2) + .25, sz2)); }
+    NAV.line.geometry.dispose(); NAV.line.geometry = new THREE.BufferGeometry().setFromPoints(pts); }
+  NAV.line.visible = true;
+  // the arrow points along the route (next corner) relative to where the camera looks
+  const nx = NAV.route && NAV.route[Math.min(2, NAV.route.length - 1)], aim = nx && Math.hypot(nx[0] - p.x, nx[1] - p.z) > 3 ? nx : T;
+  const ang = Math.atan2(aim[0] - p.x, aim[1] - p.z), camAng = Math.atan2(-Math.sin(camYaw), -Math.cos(camYaw));
+  el.hidden = false; el.firstElementChild.style.transform = `rotate(${(camAng - ang) * 180 / Math.PI}deg)`; el.lastElementChild.textContent = d > 999 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m';
+}
+let mapMode = 'tp';
+$('mmTp').addEventListener('click', () => { mapMode = 'tp'; $('mmTp').classList.add('on'); $('mmNav').classList.remove('on'); $('mapCap').textContent = '點擊地圖任一處即可傳送 · 按 M 或 ESC 關閉'; });
+$('mmNav').addEventListener('click', () => { mapMode = 'nav'; $('mmNav').classList.add('on'); $('mmTp').classList.remove('on'); $('mapCap').textContent = '點擊地圖設定導航點 · 綠線會帶你過去'; });
+$('mmClear').addEventListener('click', () => { NAV.way = null; drawBig(); toast('已清除導航'); });
+$('mapSearch').addEventListener('input', () => {
+  const q = $('mapSearch').value.trim(), res = $('mapRes'); res.innerHTML = ''; if (!q) { res.hidden = true; return; }
+  const items = [...BUILT.map(b => ({ n: b.name + (b.code ? ` (${b.code})` : ''), x: b.entrance ? b.entrance.x + b.entrance.nx * 4 : centroid(b.pts)[0], z: b.entrance ? b.entrance.z + b.entrance.nz * 4 : centroid(b.pts)[1] })),
+    ...zones.filter(z => z.prio >= 2 && z.label).map(z => ({ n: z.name, x: (z.minX + z.maxX) / 2, z: (z.minZ + z.maxZ) / 2 })), ...LOTS.map(L => ({ n: L.n, x: L.x, z: L.z }))];
+  const seen = new Set(), hits = items.filter(it => it.n.toLowerCase().includes(q.toLowerCase()) && !seen.has(it.n) && seen.add(it.n)).slice(0, 12);
+  for (const it of hits) { const d = document.createElement('div'); d.textContent = it.n; d.onclick = () => { setWaypoint(it.x, it.z, it.n); $('mapSearch').value = ''; res.hidden = true; toggleMap(); }; res.appendChild(d); }
+  res.hidden = !hits.length;
+});
+mini.addEventListener('click', () => { if (started) toggleMap(); });
+mini.addEventListener('touchend', e => { if (started) { e.preventDefault(); toggleMap(); } });
+mini.addEventListener('wheel', e => { miniZoom = clamp(miniZoom * (e.deltaY < 0 ? 1.25 : .8), .35, 3); e.stopPropagation(); }, { passive: true });
+document.querySelectorAll('#mzoom button').forEach(b => { const z = () => { miniZoom = clamp(miniZoom * +b.dataset.z, .35, 3); }; b.addEventListener('click', z); b.addEventListener('touchend', e => { e.preventDefault(); z(); }); });
 bigc.addEventListener('click', e => {
   const r = bigc.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width * (MAP.maxX - MAP.minX) + MAP.minX, z = (e.clientY - r.top) / r.height * (MAP.maxZ - MAP.minZ) + MAP.minZ;
   let tx = x, tz = z;
   if (!inCampus(tx, tz)) { toast('請點選校園範圍內的位置'); return; }
+  if (mapMode === 'nav') { setWaypoint(tx, tz, '地圖標記'); toggleMap(); return; }
   for (let i = 0; i < 40; i++) { const p = pushOut(tx, tz, 2.2, groundY(tx, tz)); if (Math.hypot(p.x, p.z) < .01) break; tx += p.x; tz += p.z; }
   if (player.vehicle) { player.vehicle.pos.set(tx, groundY(tx, tz), tz); player.vehicle.speed = 0; syncVehicle(player.vehicle); } else player.pos.set(tx, standY(tx, tz), tz);
   camPos.set(tx, 30, tz + 10); camTarget.set(tx, 2, tz);
@@ -4006,7 +4080,7 @@ function loop(now) {
     const a = introT * .045; camera.position.set(330 + Math.cos(a) * 300, 120, -250 + Math.sin(a) * 300); camera.lookAt(330, 10, -250);
   }
   updatePeds(dt); updateTraffic(dt); updateDog(dt);
-  if (started) { passingRemarks(dt); ghostTick(dt); lifeTick(dt); missionTick(dt); if (actx) hornTick(); }
+  if (started) { passingRemarks(dt); ghostTick(dt); lifeTick(dt); missionTick(dt); navTick(dt); if (actx) hornTick(); }
   updateBubbles(dt);
   for (const v of vehicles) if (v.npc && !started) updateNpcCar(v, dt);
   const t = now / 1000;
@@ -4063,7 +4137,7 @@ async function boot() {
   for (const b of SURVEY.bld) buildBuilding(b);
   buildLots(); buildSports(); buildGates(); buildBoundary(); buildFurniture();
   buildSpecials(); planTrees(); buildTrees(); buildPaint();
-  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs(); setupMissions(); setupNightLights(); setupRain();
+  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs(); setupMissions(); setupNightLights(); setupRain(); buildNav();
   const A = BUILT.find(b => b.name === '行政大樓'), E = A.entrance;
   SPAWN.x = E.x + E.nx * 14; SPAWN.z = E.z + E.nz * 14; SPAWN.yaw = Math.atan2(-E.nx, -E.nz);
   player.pos.set(SPAWN.x, standY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw;
