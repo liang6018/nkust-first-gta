@@ -2837,7 +2837,7 @@ function spawnNpcCars() {
   const bwd = []; for (let i = i0; i !== i1; i = (i - 1 + n) % n) bwd.push(rb[i]); bwd.push(rb[i1]);
   const turnsCCW = arc => arc.length > 1 && wrapA(ang(arc[1]) - ang(arc[0])) > 0;
   const arc = turnsCCW(fwd) ? fwd : bwd;
-  const path = [...A, ...arc, ...C];
+  const path = [...A, ...arc, ...C]; NPC_PATH.push(...path);
   const defs = [[0xf2f2f0, 'taxi'], [0x8f1d1f, 'sedan'], [0xa8adb2, 'suv'], [0x2a2d31, 'van']];
   defs.forEach(([color, kind], k) => {
     const idx = Math.floor(path.length * (k + .15) / defs.length), a = path[idx], b = path[(idx + 1) % path.length];
@@ -2846,7 +2846,19 @@ function spawnNpcCars() {
   });
 }
 
-const traffic = [];
+const traffic = [], NPC_PATH = [];
+/* scooters and bikes ridden around the east campus ring by NPC students */
+function spawnNpcRiders() {
+  const path = NPC_PATH; if (path.length < 10) return;
+  const defs = [['scooter', 0], ['scooter', .12], ['scooter', .37], ['scooter', .58], ['scooter', .81], ['bike', .25], ['bike', .5], ['bike', .7]];
+  for (const [type, f] of defs) {
+    const idx = Math.floor(path.length * f), a = path[idx], b = path[(idx + 1) % path.length];
+    const v = createVehicle(type, a[0], a[1], Math.atan2(b[0] - a[0], b[1] - a[1]), { kind: type === 'bike' && rnd() < .5 ? 'youbike' : undefined });
+    v.npc = { path, next: (idx + 1) % path.length, driver: true };
+    const rider = makeHuman({ shirt: pick(SHIRTS), pants: pick(PANTS), bag: rnd() < .6 ? 0x2c3e50 : undefined, long: rnd() < .4 }); v.mesh.add(rider); v.rider = rider;
+    if (type === 'bike') { rider.position.set(0, -.02, -.3); animHuman(rider, 0, 1, 'bike'); } else { rider.position.set(0, -.06, -.2); animHuman(rider, 0, 0, 'seat'); const helm = new THREE.Mesh(new THREE.SphereGeometry(.17, 10, 8), M(pick([0xf2f2f0, 0xc0392b, 0x2c5ea8, 0x1b1b1b]), { roughness: .4 })); helm.position.set(0, .83, 0); rider.userData.parts.hips.add(helm); }
+  }
+}
 
 function spawnTraffic() {
   for (let i = 0; i < 36; i++) {
@@ -3173,6 +3185,7 @@ function actionInfo() {
   const dv = v ? Math.hypot(v.pos.x - player.pos.x, v.pos.z - player.pos.z) - (v.type === 'car' ? 1.6 : .6) : 1e9;
   if (t && (!v || t.d < dv)) {
     if (t.kind === 'dog') return { label: '摸摸小黑', go: petDog };
+    if (MS && MS.m.id === 'flyer' && !MS.flyers.has(t.p)) return { label: '發傳單', go: () => { MS.flyers.add(t.p); say(t.p.g, pick(['好喔，我會去看看！', '吉他社？聽起來不錯', '謝謝～', '我考慮一下', '哇，社團博覽會在哪？']), 2.5); toast(`傳單 ${MS.flyers.size}／5`, 1.5); vib(15); } };
     if (t.p.role === 'lost' && freshman.state !== 'follow') return { label: '問路', go: () => talkTo(t.p) };
     return { label: '搭話', go: () => talkTo(t.p) };
   }
@@ -3501,6 +3514,22 @@ function setupMissions() {
     intro: '學長的機車停在西校區，幫他騎到東校區的機車停車場停好（停進車棚區、車子停穩）。', steps: [
       { text: '在西校區機車停車場騎一台機車', at: lot('M2') && [lot('M2').x, lot('M2').z], r: 25, check: () => player.vehicle && player.vehicle.type === 'scooter' },
       { text: '騎到東校區機車停車場，在場內停穩', at: lot('M1') && [lot('M1').x, lot('M1').z], r: 40, check: () => { const v = player.vehicle, L = lot('M1'); return v && v.type === 'scooter' && Math.abs(v.speed) < .5 && inPoly(v.pos.x, v.pos.z, L.pts); } }] });
+  { const K = bld('學生活動中心'); const g = front(K, 12);
+    add({ id: 'flyer', title: '社團招新', reward: 2, time: 150, giver: g, intro: '吉他社要招新！在校園裡找路人，靠近按 F 發傳單，發給 5 個人。', steps: [
+      { text: '對路人按 F 發傳單', at: g, r: 999, flyer: 5, check: () => MS.flyers && MS.flyers.size >= 5 }] }); }
+  { const pts = ['行政大樓', '工學院', '學生活動中心'].map(n => front(bld(n), 6)).filter(Boolean);
+    add({ id: 'patrol', title: '夜間巡邏', reward: 3, time: 300, night: true, giver: front(bld('行政大樓'), 14) && [front(bld('行政大樓'), 14)[0] + 6, front(bld('行政大樓'), 14)[1]],
+      intro: '幫校警巡邏：天黑了，依序到這幾個地方看看有沒有異狀（會自動變成晚上）。', steps: [
+        ...pts.map((at, i) => ({ text: `巡邏點 ${i + 1}：${['行政大樓', '工學院', '學生活動中心'][i]}`, at, r: 5 })),
+        { text: '巡邏點 4：大學橋上', at: [0, 0], r: 14, check: () => subj().y > DECK - .5 && Math.hypot(subj().x, subj().z) < 14 },
+        { text: '巡邏點 5：鴴池', at: SURVEY.anchors['鴴池中心'], r: 40 }] }); }
+  { const ring = roadBy('東校區外環道'), RL = polyLen(ring.p), cp = [.18, .4, .62, .84].map(f => { const [x, z] = sampleLine(ring.p, RL * f); return [x, z]; }), yb = ybA && [ybA.x + 4, ybA.z + 2];
+    add({ id: 'bikerace', title: '腳踏車計時賽', reward: 4, time: 210, giver: yb, intro: '騎腳踏車繞東校區外環道一圈，依序通過 4 個檢查點。YouBike 或一般腳踏車都可以。', steps: [
+      { text: '騎上一台腳踏車', at: ybA && [ybA.x, ybA.z], r: 40, check: () => player.vehicle && player.vehicle.type === 'bike' },
+      ...cp.map((at, i) => ({ text: `檢查點 ${i + 1}／4`, at, r: 9, check: () => player.vehicle && player.vehicle.type === 'bike' && distTo(...at) < 9 }))] }); }
+  { const J = bld('圖書資訊大樓'), g = front(J, 16);
+    add({ id: 'umbrella', title: '雨天送傘', reward: 2, time: 100, rain: true, giver: g, intro: '突然下大雨！同學被困在管理學院，從圖書館這裡帶傘過去給他（會開始下雨）。', steps: [
+      { text: '把傘送到管理學院正門', at: front(bld('管理學院'), 3), r: 5 }] }); }
   add({ id: 'tour', title: '校園巡禮', reward: 4, time: 0, giver: [RB.x + 18, RB.z + 6],
     intro: '帶新生認識校園：到這五個地方打卡，順序隨你。', steps: [
       { text: '打卡', any: [
@@ -3524,7 +3553,7 @@ function setupMissions() {
 }
 const MS_BEACONS = [];
 function nearGiver() { if (MS || !started) return null; const p = subj(); for (const m of MISSIONS) if (Math.hypot(p.x - m.giver[0], p.z - m.giver[1]) < 2.6 && Math.abs(p.y - groundY(...m.giver)) < 2) return m; return null; }
-function curTargets() { if (!MS) return []; const st = MS.m.steps[MS.step]; if (st.any) return st.any.filter(c => !MS.seen.has(c.name)).map(c => ({ at: c.at, name: c.name })); return [{ at: st.at }]; }
+function curTargets() { if (!MS) return []; const st = MS.m.steps[MS.step]; if (st.flyer) return []; if (st.any) return st.any.filter(c => !MS.seen.has(c.name)).map(c => ({ at: c.at, name: c.name })); return [{ at: st.at }]; }
 function missionMarkers() {
   if (!MISSIONS.length) return [];
   if (MS) return curTargets().map(t => ({ x: t.at[0], z: t.at[1], c: '#3fc46b', t: '●', pin: true }));
@@ -3532,7 +3561,8 @@ function missionMarkers() {
 }
 function startMission(m) {
   if (MS) return;
-  MS = { m, step: 0, t: 0, seen: new Set() };
+  MS = { m, step: 0, t: 0, seen: new Set(), flyers: new Set() };
+  if (m.night && timeMode !== 'night') setTimeMode('night'); if (m.rain && !raining) setRain(true);
   toast(`任務開始：${m.title}`, 3); say(player.g, m.intro.slice(0, 22) + (m.intro.length > 22 ? '…' : ''), 3);
   $('mlist').hidden = true; updateMissionUI(); vib(30);
 }
@@ -3562,10 +3592,10 @@ let lastMsUI = '';
 function updateMissionUI() {
   const el = $('mission'); if (!MS) { el.hidden = true; lastMsUI = ''; return; }
   const m = MS.m, st = m.steps[MS.step], tg = curTargets()[0];
-  const obj = st.any ? `${st.text}（${MS.seen.size}/${st.any.length}）：${st.any.filter(c => !MS.seen.has(c.name)).map(c => c.name).join('、')}` : st.text;
+  const obj = st.any ? `${st.text}（${MS.seen.size}/${st.any.length}）：${st.any.filter(c => !MS.seen.has(c.name)).map(c => c.name).join('、')}` : st.flyer ? `${st.text}（${MS.flyers.size}/${st.flyer}）` : st.text;
   const d = tg ? Math.round(distTo(...tg.at)) : 0, left = m.time ? m.time - MS.t : MS.t;
   const key = obj + d + Math.floor(left); if (key === lastMsUI) return; lastMsUI = key;
-  el.hidden = false; $('mT').textContent = m.title; $('mO').textContent = `${obj}　·　${d} m`;
+  el.hidden = false; $('mT').textContent = m.title; $('mO').textContent = tg ? `${obj}　·　${d} m` : obj;
   $('mC').textContent = m.time ? `剩 ${fmtT(Math.max(0, left))}` : fmtT(left); $('mC').classList.toggle('low', !!m.time && left < 20);
 }
 function toggleMissionList() {
@@ -3600,7 +3630,8 @@ function toggleVehicle() {
   if (v.npc && v.npc.driver) { // GTA-style: the driver hops out and runs
     const fx = Math.sin(v.heading), fz = Math.cos(v.heading);
     const p = peds[Math.floor(rnd() * peds.length)];
-    p.g.position.set(v.pos.x + fz * 2, 0, v.pos.z - fx * 2); startFlee(p, v.pos); toast('司機嚇得跑走了！');
+    p.g.position.set(v.pos.x + fz * 2, 0, v.pos.z - fx * 2); startFlee(p, v.pos); toast(v.rider ? '騎士嚇得跳車跑走了！' : '司機嚇得跑走了！');
+    if (v.rider) { v.mesh.remove(v.rider); v.rider = null; }
   }
   v.npc = null; v.speed = 0;
   player.vehicle = v;
@@ -3709,7 +3740,7 @@ function rideBike(v, dt, inp) {
   v.bar.rotation.y = v.steer;
   if (inp.fwd && v.speed > 0) v.crankA += v.speed * dt / (.34 * 2.4) + dt * .8; // pedalling (2.4 m per crank turn, plus a little effort uphill)
   v.crank.rotation.x = v.crankA;
-  if (v === player.vehicle) animHuman(player.g, v.crankA, 1, 'bike');
+  if (v === player.vehicle) animHuman(player.g, v.crankA, 1, 'bike'); else if (v.rider) animHuman(v.rider, v.crankA, 1, 'bike');
   v.tailM.emissiveIntensity = v.braking ? 1.6 : (lampsOn() || (lightsOn && v === player.vehicle) ? .9 : .25);
   v.headM.emissiveIntensity = (lampsOn() || lightsOn) && v === player.vehicle ? 2 : .05;
   syncVehicle(v);
@@ -3769,7 +3800,9 @@ function updateCoasting(v, dt) {
   syncVehicle(v);
 }
 function startFlee(p, from) { p.state = 'flee'; p.timer = rr(3, 5); const dx = p.g.position.x - from.x, dz = p.g.position.z - from.z, d = Math.hypot(dx, dz) || 1; p.flee = [dx / d, dz / d]; }
+const MOVING = [];
 function updatePeds(dt) {
+  MOVING.length = 0; for (const v of vehicles) if (Math.abs(v.speed) > 2 && (v.npc || v === player.vehicle)) MOVING.push(v);
   for (const p of peds) {
     const far = p.g.position.distanceToSquared(camera.position) > Q.ped * Q.ped;
     p.g.visible = !far && !p.hidden;
@@ -3791,6 +3824,8 @@ function updatePeds(dt) {
       continue;
     }
     if (pedSpecial(p, dt)) continue;
+    // give way: pause when a moving vehicle is close and heading this way
+    if (!p.pause || p.pause <= 0) for (const v of MOVING) { const dx = p.g.position.x - v.pos.x, dz = p.g.position.z - v.pos.z, d = Math.hypot(dx, dz); if (d < 10 && d > 1.5 && (dx * Math.sin(v.heading) + dz * Math.cos(v.heading)) / d > .6) { p.pause = 1.2; break; } }
     let moving = true;
     if (p.pause > 0) { p.pause -= dt; moving = false; }
     else { p.s += p.dir * p.speed * dt; if (p.s > p.route.len || p.s < 0) { p.s = clamp(p.s, 0, p.route.len); p.dir *= -1; if (rnd() < .5) p.pause = rr(1, 5); } else if (rnd() < .0015) p.pause = rr(2, 6); }
@@ -4137,7 +4172,7 @@ async function boot() {
   for (const b of SURVEY.bld) buildBuilding(b);
   buildLots(); buildSports(); buildGates(); buildBoundary(); buildFurniture();
   buildSpecials(); planTrees(); buildTrees(); buildPaint();
-  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); setupEggs(); setupMissions(); setupNightLights(); setupRain(); buildNav();
+  spawnParked(); spawnNpcCars(); spawnTraffic(); spawnPeds(); spawnNpcRiders(); setupEggs(); setupMissions(); setupNightLights(); setupRain(); buildNav();
   const A = BUILT.find(b => b.name === '行政大樓'), E = A.entrance;
   SPAWN.x = E.x + E.nx * 14; SPAWN.z = E.z + E.nz * 14; SPAWN.yaw = Math.atan2(-E.nx, -E.nz);
   player.pos.set(SPAWN.x, standY(SPAWN.x, SPAWN.z), SPAWN.z); player.yaw = SPAWN.yaw;
