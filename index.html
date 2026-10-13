@@ -938,7 +938,9 @@ function buildBuilding(b) {
     const signW = Math.min(small ? 6 : 14, E.len * .5);
     const st = textTex([name, L.en + (L.c ? ` · ${L.c}` : '')], { w: 1024, h: 200, bg: '#22313b', fg: '#f6f1e7', sizes: [name.length > 9 ? 64 : 86, 34] });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(signW, signW * 200 / 1024), new THREE.MeshStandardMaterial({ map: st, roughness: .6 }));
-    sign.position.set(0, L.arcade ? 10.4 : small ? 3.2 : (L.terrace || L.rotunda) ? info.levels[1] + DOOR.h + 1.3 : 5.4 + (L.base || 0), L.arcade ? setback + .1 : .12); g.add(sign);
+    const sh = signW * 200 / 1024; let sy = L.arcade ? 10.4 : small ? 3.2 : (L.terrace || L.rotunda) ? info.levels[1] + DOOR.h + 1.3 : 5.4 + (L.base || 0);
+    if (info.signClear) sy = Math.min(Math.max(sy, info.signClear + .35 + sh / 2), h - sh / 2 - .4); // above a canopy / skybridge / rotunda roof in front of it
+    sign.position.set(0, sy, L.arcade ? setback + .1 : .12); g.add(sign); info.signMesh = sign;
     if (L.c) {
       const lt = canvasTex(256, 256, (cg) => { cg.font = `600 250px Teko, ${FONT}`; cg.textAlign = 'center'; cg.textBaseline = 'middle'; cg.lineWidth = 10; cg.strokeStyle = 'rgba(30,30,30,.7)'; cg.strokeText(L.c, 128, 150); cg.fillStyle = '#f7f3ea'; cg.fillText(L.c, 128, 150); });
       const lm = new THREE.Mesh(new THREE.PlaneGeometry(5, 5), new THREE.MeshStandardMaterial({ map: lt, transparent: true, alphaTest: .1 }));
@@ -1038,7 +1040,7 @@ function buildRotunda(info, R) {
   const slab = (poly, y, th, mat) => { const m = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(poly.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: th, bevelEnabled: false }).rotateX(-Math.PI / 2), mat); m.position.y = y - th; m.castShadow = m.receiveShadow = true; scene.add(m); blockers.push(m); return m; };
   // pillars, ring beam and roof
   const nP = 9; for (let k = 0; k < nP; k++) { const [x, z] = pol(R.R, 8 + 164 * k / (nP - 1)); cyl(.45, .45, H2, colM, x, H2 / 2, z, scene, 16); addCircle(x, z, .5, -99, H2); }
-  const roof = []; for (let a = 0; a <= 180; a += 10) roof.push(pol(R.R + .4, a)); slab(roof, H2 + .45, .5, conc);
+  const roof = []; for (let a = 0; a <= 180; a += 10) roof.push(pol(R.R + .4, a)); slab(roof, H2 + .45, .5, conc); info.signClear = H2 + .45;
   // the curved 2F walkway: half disc out to r0, plus the strip where the stair arrives
   const a0 = 165, sweep = 150, n = 26, top = a0 - sweep;
   const walk = []; for (let a = 180; a >= top; a -= 5) walk.push(pol(R.r0, a)); walk.push(pol(R.r1, top), pol(R.r1, 0));
@@ -1106,6 +1108,7 @@ function buildSkybridge(info, S) {
     const u1 = [(c[0] - a[0]) / l1, (c[1] - a[1]) / l1], u2 = [(d[0] - c[0]) / l2, (d[1] - c[1]) / l2], h = w / 2;
     for (const [u, sgn] of [[u1, 1], [u2, -1]]) { const n = [-u[1], u[0]], ex = c[0] + u[0] * h * sgn, ez = c[1] + u[1] * h * sgn; addWall(ex + n[0] * h, ez + n[1] * h, ex - n[0] * h, ez - n[1] * h, H - .4, H + 2.2, false, .1); const r = box(.06, 1, w, M(0xf1efe9), ex, H + .5, ez, scene, false); r.rotation.y = Math.atan2(n[0], n[1]); }
   }
+  { const E = info.entrance; if (E) for (let i = 1; i < P.length; i++) { const [d] = segDist(E.x + E.nx * 3, E.z + E.nz * 3, P[i - 1][0], P[i - 1][1], P[i][0], P[i][1]); if (d < 10) info.signClear = Math.max(info.signClear || 0, H + 3.1); } }
   // stairs down at the plaza end
   const a = P[0], b = P[1], l = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!S.both) buildSteps(a[0], a[1], (a[0] - b[0]) / l, (a[1] - b[1]) / l, { w: S.w, land: 0 }, H, true);
   zone('空橋', S.both ? '樂群樓 二樓鋼構空橋' : '學生活動中心 二樓空橋', bboxOf(P, 4), '空橋', 3);
@@ -1119,11 +1122,15 @@ function buildSpecials() {
     for (const sx of [-4.6, 4.6]) { box(1.5, 5.6, 1.5, Y, sx, 2.8, 4.2, g); addCircle(...toW(E, sx, 4.2), 1.0); box(1.5, 1, 4.8, Y, sx, 6, 2.4, g); }
     box(10.7, 1, 1.5, Y, 0, 6, 4.2, g); box(10.7, 1, .8, Y, 0, 6, .4, g);
     for (let k = -4; k <= 4; k++) { const d = box(.08, .08, 4.2, Y, k * 1, 6.3, 2.3, g, false); d.rotation.x = .25 * (k % 2 ? 1 : -1); }
-    for (let k = 0; k < 4; k++) box(9.2, .08, .08, Y, 0, 6.5, 1 + k * 1, g, false); } }
+    for (let k = 0; k < 4; k++) box(9.2, .08, .08, Y, 0, 6.5, 1 + k * 1, g, false);
+    if (B.signMesh) B.signMesh.position.y = Math.max(B.signMesh.position.y, 6.9 + .3 + B.signMesh.geometry.parameters.height / 2); } } // name above the portal frame
   // 外語學院: open portico of grey columns with red banners in front of the entrance
   { const B = by('外語學院'), E = B && B.entrance; if (E) { const g = frameAt(E), grey = M(0xa9aaa6, { roughness: .7 }), red = M(0xb3283a, { side: THREE.DoubleSide });
     for (const sx of [-9, -5, 5, 9]) { cyl(.45, .45, 7, grey, sx, 3.5, 5, g, 16); addCircle(...toW(E, sx, 5), .55); const bn = new THREE.Mesh(new THREE.PlaneGeometry(.7, 3), red); bn.position.set(sx, 4.4, 5.47); g.add(bn); }
-    box(21, .5, 6, M(0xffffff, { map: concreteTex, color: 0xd8d4cc }), 0, 7.2, 2.6, g); } }
+    const conc = M(0xffffff, { map: concreteTex, color: 0xd8d4cc }); box(21, .5, 6, conc, 0, 7.2, 2.6, g); box(21, 1.6, .35, conc, 0, 7.05, 5.62, g);
+    if (B.signMesh) B.signMesh.visible = false; // the facade sign would sit behind the portico roof
+    const st = textTex([B.name, `${B.look.en} · ${B.look.c}`], { w: 2048, h: 200, bg: '#22313b', fg: '#f6f1e7', sizes: [92, 40] });
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(14, 14 * 200 / 2048), new THREE.MeshStandardMaterial({ map: st, roughness: .6 })); sg.position.set(0, 7.05, 5.81); g.add(sg); } }
   // 管理學院: grey top band, cylindrical glass stair tower at the west end, checker-paved plaza with flowering hedges to the south
   { const B = by('管理學院'), E = B && B.entrance; if (E) {
     wallRing(B.pts, B.h - 3.8, B.h, facadeMat2('mgmt-top', { wall: '#8C8A85', accent: '#6f6c66', kind: 'unit', frame: '#b5b2ab' }), 3.8, 0, .08);
@@ -1251,7 +1258,7 @@ function coreAB(c, u, v) { const du = u - c.u, dv = v - c.v; return [du * c.du +
 function planGrid(poly, F, cfg, levels, coresIn, open) {
   const G = makeGrid(F, poly), { nu, nv, lab, dist, key } = G, N = nu * nv;
   const ds = []; for (let k = 0; k < N; k++) if (lab[k] >= 0) ds.push(dist[k]); ds.sort((a, b) => a - b);
-  const H = ds.length ? ds[Math.floor(ds.length * .95)] : 3, cw = H > 6 ? 3 : 2.4, R = clamp(H - cw / 2, 3, 9); G.R = R;
+  const H = ds.length ? ds[Math.floor(ds.length * .95)] : 3, cw = H > 6 ? 3 : 2.4, R = H < 4.2 ? Math.max(2.2, H - 1.2) : clamp(H - cw / 2, 3, 9); G.R = R; // narrow wings keep a 2.4 m corridor
   // rooms along the outer walls
   if (!open) {
     const E = poly.map((a, i) => { const b = poly[(i + 1) % poly.length]; return { a, b, len: Math.hypot(b[0] - a[0], b[1] - a[1]) }; });
@@ -1264,6 +1271,8 @@ function planGrid(poly, F, cfg, levels, coresIn, open) {
       const e = E[be], t = ((x - e.a[0]) * (e.b[0] - e.a[0]) + (z - e.a[1]) * (e.b[1] - e.a[1])) / e.len;
       key[k] = be * 1000 + clamp(Math.floor(t / e.m), 0, 999);
     }
+    // deep plans: a ring corridor round the core, with inner rooms (stores, toilets, offices) in the middle instead of an empty hall
+    if (H - R > cw + 2) for (let k = 0; k < N; k++) if (lab[k] >= 0 && dist[k] >= R + cw) { const [u, v] = cellUV(G, k); key[k] = 500000 + Math.floor(u / cfg.mod + 50) * 100 + Math.floor(v / cfg.mod + 50); }
     G.E = E;
   }
   // stair cores
@@ -1322,6 +1331,21 @@ function planGrid(poly, F, cfg, levels, coresIn, open) {
       for (const bad of bads) { const p = bfsTo(bad.cells, k => isCorr(k)); if (p) carve(p); else for (const k of bad.cells) key[k] = -1; }
       rooms = comps();
     }
+    // pockets of corridor cut off from the main network: joined up when they hold a stair landing, else part of the room around them
+    for (let it = 0; it < 6; it++) {
+      comps();
+      const small = new Set(); { const cnt = new Map(); for (let k = 0; k < N; k++) if (G.room[k] >= 0) cnt.set(G.room[k], (cnt.get(G.room[k]) || 0) + 1); for (const [id, n] of cnt) if (n < 32) small.add(id); }
+      const corr = k => lab[k] === 0 && (key[k] < 0 || small.has(G.room[k]));
+      const main = new Uint8Array(N), q = [start]; main[start] = 1; for (let h = 0; h < q.length; h++) for (const m of nb(q[h])) if (!main[m] && corr(m)) { main[m] = 1; q.push(m); }
+      const seen = new Uint8Array(N); let changed = false;
+      for (let k = 0; k < N; k++) { if (!corr(k) || main[k] || seen[k]) continue; const c = [k]; seen[k] = 1; for (let h = 0; h < c.length; h++) for (const m of nb(c[h])) if (!seen[m] && corr(m) && !main[m]) { seen[m] = 1; c.push(m); }
+        const landing = c.some(x => { const [u, v] = cellUV(G, x); return cores.some(cc => { const [a, b] = coreAB(cc, u, v); return a >= -1.8 && a < 0 && Math.abs(b) <= cc.W / 2 + .3; }); });
+        const cnt = new Map(); for (const x of c) for (const m of nb(x)) if (lab[m] === 0 && key[m] >= 0 && !small.has(G.room[m])) cnt.set(key[m], (cnt.get(key[m]) || 0) + 1);
+        const best = [...cnt].sort((a, b) => b[1] - a[1])[0];
+        if (landing || !best) { const p = bfsTo(c, x => main[x] === 1); if (p) { carve(p); changed = true; } }
+        else { for (const x of c) key[x] = best[0]; changed = true; } }
+      if (!changed) break;
+    }
     G.rooms = comps().filter(r => r.cells.length >= 32);
     for (let k = 0; k < N; k++) if (G.room[k] >= 0 && !G.rooms.some(r => r.id === G.room[k])) { key[k] = -1; G.room[k] = -1; }
   } else G.rooms = comps();
@@ -1343,7 +1367,7 @@ async function loadPlans() {
 }
 function planFor(name) { if (!PLANS) return null; if (PLANS[name]) return PLANS[name]; return null; }
 function unRLE(s, N) { const a = new Int16Array(N); let p = 0; for (const t of s.split(',')) { const [v, n] = t.split('*'); const vv = +v, nn = n ? +n : 1; a.fill(vv, p, p + nn); p += nn; } return a; }
-function planGridsFromData(PD, poly, levels, F, doorsW) {
+function planGridsFromData(PD, poly, levels, F, doorsW, cfg = {}) {
   const N = PD.nu * PD.nv, nb = (G, k) => { const i = k % G.nu, out = []; if (i > 0) out.push(k - 1); if (i < G.nu - 1) out.push(k + 1); if (k >= G.nu) out.push(k - G.nu); if (k < N - G.nu) out.push(k + G.nu); return out; };
   const E = poly.map((a, i) => { const b = poly[(i + 1) % poly.length]; return { a, b, len: Math.hypot(b[0] - a[0], b[1] - a[1]) }; });
   // one shared footprint raster
@@ -1355,6 +1379,9 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
   let rise = 0; for (let k = 1; k < levels.length; k++) rise = Math.max(rise, levels[k] - levels[k - 1]);
   const n = Math.ceil(rise / 2 / .165), L = n * .28, W = 3.0, LAND = 1.5, CL = LAND + L + LAND;
   const code0 = unRLE(PD.floors[0].g, N);
+  { // a plan that doesn't line up with the footprint (scan offset / wrong outline) is worse than a generated layout
+    let pi = 0, po = 0, fp = 0, un = 0; for (let k = 0; k < N; k++) { if (code0[k]) { pi++; if (lab0[k] < 0) po++; } if (lab0[k] >= 0) { fp++; if (!code0[k]) un++; } }
+    if (po / Math.max(1, pi) > .2 || un / Math.max(1, fp) > .2) return { grids: [], cores: [] }; }
   const at = (u, v) => gI(base, u, v);
   const cores = [], cand = [];
   if (levels.length > 1) for (const [a0, b0, a1, b1, ax] of PD.cores) {
@@ -1375,7 +1402,10 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
   const grids = PD.floors.map(fl => {
     const code = unRLE(fl.g, N), lab = Int8Array.from(lab0), room = new Int32Array(N).fill(-1), key = new Int32Array(N).fill(-1);
     const G = { ...base, lab, dist, key, room, code, E, R: 6 };
-    for (let k = 0; k < N; k++) { if (lab[k] < 0) continue; if (code[k] === 0) code[k] = 2; if (code[k] >= 3) room[k] = code[k] - 3; }
+    const fi = PD.floors.indexOf(fl), flDoors = doorsW.filter(d => Math.abs((d.y0 ?? levels[0]) - (levels[fi] ?? -99)) < .5);
+    for (let k = 0; k < N; k++) if (lab[k] >= 0 && code[k] === 0) code[k] = 2;
+    const roomsList = tidyPlan(G, code, fl.rooms.slice(), cfg, fi, flDoors);
+    for (let k = 0; k < N; k++) { if (lab[k] < 0) continue; if (code[k] >= 3) room[k] = code[k] - 3; }
     // stair cores, and a clear landing in front of each on every floor
     for (let k = 0; k < N; k++) {
       if (lab[k] < 0) continue; const [u, v] = cellUV(G, k);
@@ -1387,8 +1417,8 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
     const bfs = (srcs, goal) => bfs0(srcs, goal, .9) || bfs0(srcs, goal, 0);
     // entrances on the ground floor open onto a corridor
     const starts = [];
-    for (const d of doorsW) { const [u, v] = gUV(G, d.gx - d.nx * .8, d.gz - d.nz * .8), k = gI(G, u, v); if (k >= 0 && lab[k] === 0) starts.push(k); }
-    if (fl === PD.floors[0]) for (const d of doorsW) { // a 2.5 m wide vestibule straight in from each door until it meets a corridor
+    for (const d of flDoors) { const [u, v] = gUV(G, d.gx - d.nx * .8, d.gz - d.nz * .8), k = gI(G, u, v); if (k >= 0 && lab[k] === 0) starts.push(k); }
+    for (const d of flDoors) { // a 2.5 m wide vestibule straight in from each door until it meets a corridor
       const tx = -d.nz, tz = d.nx, cellAt = (a, o) => gI(G, ...gUV(G, d.gx - d.nx * a + tx * o, d.gz - d.nz * a + tz * o));
       for (let a = .25; a < 9; a += .5) {
         let meet = a > 2;
@@ -1398,7 +1428,7 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
     }
     // the corridor network is one piece, reachable from the stairs (or the main door)
     const fronts = []; for (const c of cores) { const k = gI(G, c.u - c.du * 1, c.v - c.dv * 1); if (k >= 0 && lab[k] === 0) fronts.push(k); }
-    const seed = fl === PD.floors[0] && starts.length ? [starts[0]] : fronts.slice(0, 1);
+    const seed = starts.length ? [starts[0]] : fronts.slice(0, 1);
     const isCorrW = k => isCorr(k) && dist[k] >= .6;
     if (seed.length) for (let it = 0; it < 6; it++) {
       const main = new Uint8Array(N), q = [...seed]; for (const s of seed) main[s] = 1;
@@ -1408,6 +1438,12 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
       if (!others.length) break;
       for (const c of others) { const set = new Set(c), p = bfs(c, k => main[k] === 1); if (p) carve(p, false); }
     }
+    // the corridor network that leads to the doors / stairs; bits of floor cut off from it become part of the room around them
+    const mainNet = () => { const m = new Uint8Array(N), q = [...seed, ...fronts].filter(k => isCorr(k)); for (const k of q) m[k] = 1; for (let h = 0; h < q.length; h++) for (const x of nb(G, q[h])) if (!m[x] && isCorr(x)) { m[x] = 1; q.push(x); } return m; };
+    if (seed.length) { const m = mainNet(), seen = new Uint8Array(N);
+      for (let k = 0; k < N; k++) { if (!isCorr(k) || m[k] || seen[k]) continue; const c = [k]; seen[k] = 1; for (let h = 0; h < c.length; h++) for (const x of nb(G, c[h])) if (!seen[x] && isCorr(x) && !m[x]) { seen[x] = 1; c.push(x); }
+        const cnt = new Map(); for (const q of c) for (const x of nb(G, q)) if (lab[x] === 0 && code[x] >= 3) cnt.set(code[x], (cnt.get(code[x]) || 0) + 1);
+        const best = [...cnt].sort((a, b) => b[1] - a[1])[0]; if (best) for (const q of c) { code[q] = best[0]; room[q] = 0; } } }
     // rooms = connected pieces of each plan room
     const comps = () => {
       const rooms = []; room.fill(-1);
@@ -1415,7 +1451,7 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
         if (lab[k] !== 0 || code[k] < 3 || room[k] >= 0) continue;
         const cells = [k], id = rooms.length; room[k] = id;
         for (let q = 0; q < cells.length; q++) for (const m of nb(G, cells[q])) if (lab[m] === 0 && code[m] === code[k] && room[m] < 0) { room[m] = id; cells.push(m); }
-        const [type, label] = fl.rooms[code[k] - 3] || ['office', ''];
+        const [type, label] = roomsList[code[k] - 3] || ['office', ''];
         rooms.push({ id, key: -1, cells, type, label });
       }
       for (const r of rooms) if (r.cells.length < (r.type === 'wc' || r.type === 'store' ? 6 : 14)) { for (const k of r.cells) { room[k] = -1; code[k] = 1; } r.gone = true; }
@@ -1424,15 +1460,19 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
     // every room needs a straight 2 m run of wall onto a corridor for its door; otherwise a passage is carved to it
     let rooms = comps();
     for (let it = 0; it < 10; it++) {
-      const c0 = new Uint8Array(N); for (let k = 0; k < N; k++) if (isCorr(k) && dist[k] >= 1.0) c0[k] = 1;
+      const net = seed.length ? mainNet() : null, c0 = new Uint8Array(N); for (let k = 0; k < N; k++) if (isCorr(k) && (!net || net[k]) && dist[k] >= 1.0) c0[k] = 1;
       const bads = rooms.filter(r => !r.cells.some(k => [[1, G.nu], [-1, G.nu], [G.nu, 1], [-G.nu, 1]].some(([d1, d2]) => { let run = 0; for (let s = -4; s <= 4; s++) { const c = k + d2 * s; if (c >= 0 && c < N && room[c] === r.id && c0[c + d1]) { if (++run >= 4) return true; } else run = 0; } return false; })));
       if (!bads.length) break;
-      for (const bad of bads) { const p = bfs(bad.cells, k => isCorr(k) && dist[k] >= 1.0 && !bad.cells.includes(k)); if (p) carve(p, false); else for (const k of bad.cells) { room[k] = -1; code[k] = 2; } }
+      for (const bad of bads) {
+        const cnt = new Map(); for (const k of bad.cells) for (const m of nb(G, k)) if (room[m] >= 0 && room[m] !== bad.id && !bads.some(o => o.id === room[m])) cnt.set(code[m], (cnt.get(code[m]) || 0) + 1);
+        const best = [...cnt].sort((a, b) => b[1] - a[1])[0];
+        if (best && best[1] >= 4 && bad.cells.length < 400) { for (const k of bad.cells) code[k] = best[0]; continue; } // an inner room reached through its neighbour
+        const p = bfs(bad.cells, k => c0[k] === 1 && !bad.cells.includes(k)); if (p) carve(p, true); else for (const k of bad.cells) { room[k] = -1; code[k] = 2; } }
       rooms = comps();
     }
     // keep the routes from the doors to the stairs clear of furniture
     G.clear = new Uint8Array(N);
-    { const src = [...(fl === PD.floors[0] ? starts : []), ...fronts.slice(0, 1)], dst = fronts;
+    { const src = [...starts, ...fronts.slice(0, 1)], dst = fronts;
       for (const s0 of src) for (const t of dst) { if (s0 === t) continue; const p = bfs0([s0], k => k === t, .6) || []; for (const k of p) { const i0 = k % G.nu; for (let dj = -3; dj <= 3; dj++) for (let di = -3; di <= 3; di++) { const m = k + di + dj * G.nu; if (i0 + di >= 0 && i0 + di < G.nu && m >= 0 && m < N) G.clear[m] = 1; } } } }
     G.rooms = [];
     for (const r of rooms) {
@@ -1448,6 +1488,53 @@ function planGridsFromData(PD, poly, levels, F, doorsW) {
     return G;
   });
   return { grids, cores };
+}
+
+/* the evacuation plans miss many partitions: rooms come out as 1 m slivers and whole wings as one empty "hall".
+   Tidy each floor: slivers fold into the space beside them, corridor teeth (door marks) go, corridors narrower than
+   2 m are widened, and unlabelled open floor is split into rooms along the outer walls (lobbies by the doors stay open) */
+function tidyPlan(G, code, roomsList, cfg, fi, flDoors) {
+  const { nu, nv, lab, dist, E } = G, N = nu * nv, IN = k => k >= 0 && k < N && lab[k] >= 0;
+  const nb4 = k => { const i = k % nu, o = []; if (i > 0) o.push(k - 1); if (i < nu - 1) o.push(k + 1); if (k >= nu) o.push(k - nu); if (k < N - nu) o.push(k + nu); return o; };
+  const comps = test => { const seen = new Uint8Array(N), out = []; for (let k = 0; k < N; k++) { if (seen[k] || !IN(k) || !test(k)) continue; const c = [k], v = code[k]; seen[k] = 1; for (let q = 0; q < c.length; q++) for (const m of nb4(c[q])) if (!seen[m] && IN(m) && test(m) && (v < 3 || code[m] === v)) { seen[m] = 1; c.push(m); } out.push(c); } return out; };
+  const width = cells => { // 2 × the deepest cell's distance to the piece's edge, in metres
+    const S = new Set(cells), d = new Map(), q = []; for (const k of cells) if (nb4(k).some(m => !S.has(m)) || nb4(k).length < 4) { d.set(k, 1); q.push(k); }
+    for (let h = 0; h < q.length; h++) for (const m of nb4(q[h])) if (S.has(m) && !d.has(m)) { d.set(m, d.get(q[h]) + 1); q.push(m); }
+    let mx = 0; for (const v of d.values()) mx = Math.max(mx, v); return (mx * 2 - 1) * CELL; };
+  const majority = (cells, ok) => { const S = new Set(cells), cnt = new Map(); for (const k of cells) for (const m of nb4(k)) if (!S.has(m) && IN(m) && ok(code[m])) cnt.set(code[m], (cnt.get(code[m]) || 0) + 1); const b = [...cnt].sort((a, b) => b[1] - a[1])[0]; return b ? b[0] : -1; };
+  // 1) slivers (< 2 m across, closets excepted) become part of the open floor beside them
+  for (const c of comps(k => code[k] >= 3)) { const t = (roomsList[code[c[0]] - 3] || [])[0]; if (width(c) < ((t === 'wc' || t === 'store') ? 1.4 : 2.4)) for (const k of c) code[k] = 2; }
+  // 2) corridor teeth: a corridor cell walled on three sides joins its neighbour
+  for (let it = 0; it < 3; it++) for (let k = 0; k < N; k++) { if (!IN(k) || code[k] !== 1) continue; const o = nb4(k).filter(m => IN(m) && code[m] !== 1); if (o.length >= 3) code[k] = code[o[0]]; }
+  // 3) corridors at least 2 m wide
+  for (let it = 0; it < 2; it++) {
+    const add = [];
+    for (let k = 0; k < N; k++) { if (!IN(k) || code[k] !== 1) continue;
+      for (const st of [1, nu]) { let a = k, b = k; while (IN(a - st) && code[a - st] === 1 && (st === nu || (a % nu) > 0)) a -= st; while (IN(b + st) && code[b + st] === 1 && (st === nu || (b % nu) < nu - 1)) b += st;
+        const run = (b - a) / st + 1; if (run >= 4) continue;
+        const other = st === 1 ? nu : 1; let r2 = 1; for (let c = k + other; IN(c) && code[c] === 1 && r2 < 8; c += other) r2++; for (let c = k - other; IN(c) && code[c] === 1 && r2 < 8; c -= other) r2++;
+        if (r2 < 6) continue; // a stub, not a corridor running the other way
+        for (let s = 1; s <= 4 - run; s++) { const lo = a - st * Math.ceil(s / 2) * (s % 2), hi = b + st * Math.ceil(s / 2) * (1 - s % 2); for (const c of [lo, hi]) if (IN(c) && code[c] !== 1 && dist[c] > .3) add.push(c); } } }
+    for (const c of add) code[c] = 1;
+  }
+  // 4) unlabelled open floor → rooms along the outer walls
+  const keepOpen = cfg.open || (fi === 0 && cfg.ground);
+  const lobby = k => { const [u, v] = cellUV(G, k), [x, z] = gW(G, u, v); return flDoors.some(d => Math.hypot(x - d.gx, z - d.gz) < 7); };
+  const mod = cfg.mod || 8, kind = cfg.kind === 'library' || cfg.kind === 'gym' || cfg.kind === 'workshop' || cfg.kind === 'lecture' ? 'office' : cfg.kind || 'office';
+  if (!keepOpen) for (const c of comps(k => code[k] === 2)) {
+    const cells = c.filter(k => !lobby(k)); if (cells.length < 24) continue;
+    const key = new Map();
+    for (const k of cells) { const [x, z] = gW(G, ...cellUV(G, k)); let be = 0, bd = 1e9, bt = 0; E.forEach((e, i) => { if (e.len < 3) return; const [d, t] = segDist(x, z, e.a[0], e.a[1], e.b[0], e.b[1]); if (d < bd - .01) { bd = d; be = i; bt = t; } }); const e = E[be], m = e.len / Math.max(1, Math.round(e.len / mod)); key.set(k, be * 1000 + clamp(Math.floor(bt * e.len / m), 0, 999)); }
+    const S = new Set(cells), seen = new Set(), pieces = [];
+    for (const k of cells) { if (seen.has(k)) continue; const p = [k]; seen.add(k); for (let q = 0; q < p.length; q++) for (const m of nb4(p[q])) if (S.has(m) && !seen.has(m) && key.get(m) === key.get(k)) { seen.add(m); p.push(m); } pieces.push(p); }
+    for (const p of pieces) { const area = p.length * CELL * CELL;
+      if (area < 6) continue; // scraps stay as floor
+      const t = cfg.kind === 'dorm' ? (area < 9 ? 'store' : 'dorm') : area < 12 ? 'store' : area < 30 && kind === 'class' ? 'office' : kind;
+      roomsList.push([t, '']); const cc = roomsList.length + 2; for (const k of p) code[k] = cc; }
+  }
+  // 5) leftover scraps of floor (not lobbies, not next to the corridor) join the room they sit in
+  if (!keepOpen) for (const c of comps(k => code[k] === 2)) { if (c.length >= 24 || c.some(lobby) || c.some(k => nb4(k).some(m => code[m] === 1))) continue; const m = majority(c, v => v >= 3); if (m >= 3) for (const k of c) code[k] = m; }
+  return roomsList;
 }
 
 /* ---------- geometry helpers: merged boxes with vertex colours ---------- */
@@ -1489,7 +1576,7 @@ function buildInterior(info, L, levels, pts, inner, innerCore, arcade, gx, gz) {
   const groundOpen = cfg.open || !!cfg.ground;
   let up, gr, Gs = null;
   if (info.plan) {
-    Gs = planGridsFromData(info.plan, arcade ? innerCore : inner, levels, F, info.doorsIn || []);
+    Gs = planGridsFromData(info.plan, arcade ? innerCore : inner, levels, F, [...(info.doorsIn || []), ...(info.upDoors || [])], cfg);
     if (!Gs.cores.length) Gs = null;
   }
   if (Gs) { gr = Gs.grids[0]; up = Gs.grids[Gs.grids.length - 1]; for (const G of Gs.grids) { let i = 0; for (const r of G.rooms) if (r.type === cfg.kind) { if (cfg.alt && cfg.altEvery && i % cfg.altEvery === cfg.altEvery - 1) r.type = cfg.alt; i++; } } }
@@ -1568,7 +1655,7 @@ function gridWallsOnce(G, y, ceil, WB, GB, put, cfg, force) {
       if (!ok) continue; const cb = cls(b);
       if (ca <= -8 || cb <= -8 || ca === cb) continue;
       const line = orient === 'V' ? i + 1 : j + 1, s = orient === 'V' ? j : i;
-      if (ca >= 0 && cb >= 0) addSeg(orient, line, s, 'part', Math.min(ca, cb), 0);
+      if (ca >= 0 && cb >= 0) addSeg(orient, line, s, 'part', Math.min(ca, cb), Math.max(ca, cb) + 10);
       else addSeg(orient, line, s, 'corr', ca >= 0 ? ca : cb, ca >= 0 ? -1 : 1);
     }
   }
@@ -1586,6 +1673,33 @@ function gridWallsOnce(G, y, ceil, WB, GB, put, cfg, force) {
     for (let q = 1; q < ss.length; q++) { if (ss[q] !== prev + 1) { flush(s0, prev); s0 = ss[q]; } prev = ss[q]; }
     flush(s0, prev);
   }
+  // walls of wings that run at an angle to the grid come out as staircases: straighten each chain of short steps
+  { const key = p => p.type + '|' + p.rid + '|' + (p.type === 'part' ? p.side : 0), groups = new Map();
+    for (const p of pieces) { p.A = p.P(p.c0); p.B = p.P(p.c1); (groups.get(key(p)) || groups.set(key(p), []).get(key(p))).push(p); }
+    const kx = q => q[0].toFixed(3) + ',' + q[1].toFixed(3), out = [];
+    for (const [, ps] of groups) {
+      const at = new Map(); for (const p of ps) for (const q of [p.A, p.B]) (at.get(kx(q)) || at.set(kx(q), []).get(kx(q))).push(p);
+      const used = new Set();
+      for (const p0 of ps) { if (used.has(p0)) continue;
+        // walk to one end of the chain, then collect it in order
+        let cur = p0, end = p0.A, guard = 0; for (;;) { const nx = (at.get(kx(end)) || []).filter(q => q !== cur && !used.has(q)); if (nx.length !== 1 || (at.get(kx(end)) || []).length !== 2 || nx[0] === p0 || ++guard > 400) break; cur = nx[0]; end = kx(cur.A) === kx(end) ? cur.B : cur.A; }
+        const chain = [], vs = [end]; let c = cur, v = end;
+        for (;;) { used.add(c); chain.push(c); v = kx(c.A) === kx(v) ? c.B : c.A; vs.push(v); const nx = (at.get(kx(v)) || []).filter(q => !used.has(q)); if (nx.length !== 1 || (at.get(kx(v)) || []).length !== 2) break; c = nx[0]; }
+        if (chain.length < 3) { out.push(...chain); continue; }
+        // Douglas–Peucker on the vertices: steps up to ~1 m become one slanted wall
+        const keep = new Uint8Array(vs.length); keep[0] = keep[vs.length - 1] = 1;
+        const dp = (i, j) => { const [ax, az] = vs[i], [bx, bz] = vs[j], L = Math.hypot(bx - ax, bz - az) || 1; let md = 0, mi = -1; for (let k = i + 1; k < j; k++) { const d = Math.abs((vs[k][0] - ax) * (bz - az) - (vs[k][1] - az) * (bx - ax)) / L; if (d > md) { md = d; mi = k; } } if (md > .75) { keep[mi] = 1; dp(i, mi); dp(mi, j); } };
+        dp(0, vs.length - 1);
+        let i0 = 0; for (let k = 1; k < vs.length; k++) if (keep[k]) {
+          if (k - i0 === 1) out.push(chain[i0]);
+          else { const A = vs[i0], B = vs[k], L = Math.hypot(B[0] - A[0], B[1] - A[1]), tx = (B[0] - A[0]) / L, tz = (B[1] - A[1]) / L, p = chain[i0];
+            const q = { type: p.type, rid: p.rid, side: p.side, orient: 'D', c0: 0, c1: L, P: s => [A[0] + tx * s, A[1] + tz * s] };
+            if (p.type === 'corr') { const m = [(A[0] + B[0]) / 2 - tz * .45, (A[1] + B[1]) / 2 + tx * .45], c2 = gI(G, ...gUV(G, m[0], m[1])); q.cn = c2 >= 0 && lab[c2] === 0 && room[c2] < 0 ? [-tz, tx] : [tz, -tx]; }
+            out.push(q); }
+          i0 = k; }
+      }
+    }
+    pieces.length = 0; pieces.push(...out); }
   // extend partition ends to the outer skin
   for (const p of pieces) if (p.type === 'part') {
     for (const end of [0, 1]) {
@@ -1600,7 +1714,7 @@ function gridWallsOnce(G, y, ceil, WB, GB, put, cfg, force) {
     let best = null, ds = null;
     for (const p of cands) {
       // corridor side normal of this piece
-      const s0 = p.orient === 'V' ? [G.F.U[0], G.F.U[1]] : [G.F.V[0], G.F.V[1]], cn = p.side === -1 ? s0 : [-s0[0], -s0[1]];
+      const s0 = p.orient === 'V' ? [G.F.U[0], G.F.U[1]] : [G.F.V[0], G.F.V[1]], cn = p.cn || (p.side === -1 ? s0 : [-s0[0], -s0[1]]);
       const good = c => { const [x, z] = p.P(c); if (polyEdgeDist(x, z, G.poly) < 1.35) return false; const ox = x + cn[0] * 1.0, oz = z + cn[1] * 1.0, k2 = gI(G, ...gUV(G, ox, oz)); return k2 >= 0 && G.lab[k2] === 0 && G.room[k2] < 0 && G.dist[k2] >= .8; };
       const mid = (p.c0 + p.c1) / 2, fit = (c, dir) => { for (let it = 0; it < 60; it++) { if (good(c)) return c; c += dir * .25; if (c < p.c0 + w / 2 + .05 || c > p.c1 - w / 2 - .05) return null; } return null; };
       let cs = p.c1 - p.c0 >= 6.5 && twoDoor[r.type] ? [fit(p.c0 + 1.4, 1), fit(p.c1 - 1.4, -1)].filter(c => c !== null) : [];
@@ -1609,7 +1723,11 @@ function gridWallsOnce(G, y, ceil, WB, GB, put, cfg, force) {
       if (cs.length) { best = p; ds = cs; break; }
     }
     if (!best && cands.length) { best = cands[0]; ds = [(best.c0 + best.c1) / 2]; }
-    if (!best) { if (!force) { for (const c of r.cells) { G.room[c] = -1; G.key[c] = -1; } dead.push(r); } continue; }
+    if (!best) { if (!force) { // no wall onto a corridor: join the neighbouring room (an inner room), else open it up
+        const cnt = new Map(); for (const c of r.cells) for (const m of [c - 1, c + 1, c - nu, c + nu]) if (m >= 0 && m < N && room[m] >= 0 && room[m] !== r.id && !dead.some(d => d.id === room[m])) cnt.set(room[m], (cnt.get(room[m]) || 0) + 1);
+        const nbId = [...cnt].sort((a, b) => b[1] - a[1])[0], host = nbId && G.rooms.find(o => o.id === nbId[0]);
+        if (host) { for (const c of r.cells) G.room[c] = host.id; host.cells.push(...r.cells); } else for (const c of r.cells) { G.room[c] = -1; if (G.key) G.key[c] = -1; }
+        dead.push(r); } continue; }
     best.doors = ds.map(c => [c - w / 2, c + w / 2]); r.doors = ds.map(c => ({ P: best.P(c), side: best.side, orient: best.orient, p: best }));
   }
   if (dead.length) { G.rooms = G.rooms.filter(x => !dead.includes(x)); return false; }
@@ -1930,8 +2048,10 @@ function buildShell(info, b, L, mat, floors, fh, corePts, uOff) {
   if (L.skybridge) { // the skybridge comes in at 2F: a door in whichever wall its last point touches
     const SP = L.skybridge.path, ends = L.skybridge.both ? [SP[0], SP[SP.length - 1]] : [SP[SP.length - 1]];
     for (const [x, z] of ends) { let bi = 0, bd = 1e9; for (let i = 0; i < pts.length; i++) { const a = pts[i], b2 = pts[(i + 1) % pts.length], [dd] = segDist(x, z, a[0], a[1], b2[0], b2[1]); if (dd < bd) { bd = dd; bi = i; } }
-      info.skyDoor = { i: bi, x, z }; gap.push({ i: bi, x, z, w: L.skybridge.w - .4, bot: levels[1], top: levels[1] + DOOR.h, lintel: levels[1] + DOOR.h - .8 }); }
+      info.skyDoor = { i: bi, x, z }; { const a = pts[bi], b2 = pts[(bi + 1) % pts.length], l = Math.hypot(b2[0] - a[0], b2[1] - a[1]); let nx = (b2[1] - a[1]) / l, nz = -(b2[0] - a[0]) / l; if (inPoly(x + nx * .6, z + nz * .6, pts)) { nx = -nx; nz = -nz; } (info.upDoors ||= []).push({ gx: x, gz: z, nx, nz, y0: levels[1] }); }
+      gap.push({ i: bi, x, z, w: L.skybridge.w - .4, bot: levels[1], top: levels[1] + DOOR.h, lintel: levels[1] + DOOR.h - .8 }); }
   }
+  if (L.terrace || L.rotunda) (info.upDoors ||= []).push({ gx: E.x, gz: E.z, nx: E.nx, nz: E.nz, y0: levels[1] });
   if (L.terrace || L.rotunda) gap.push({ i: E.i, x: E.x, z: E.z, w: 3.2, bot: levels[1], top: levels[1] + DOOR.h + .3, lintel: levels[1] + DOOR.h - .8 }); // main door one floor up, onto the terrace
   const inner = insetPoly(pts, .25), innerCore = arcade || (L.colonnade && corePts !== pts) ? insetPoly(corePts, .25) : inner;
   // outer skin and inner skin (facade texture inside too, so the windows read from the rooms)
@@ -2550,7 +2670,10 @@ function planTrees() {
   // fill the campus
   let tries = 0, placed = 0;
   while (placed < 1100 && tries < 40000) { tries++; const x = rr(WORLD.minX, WORLD.maxX), z = rr(WORLD.minZ, WORLD.maxZ); if (!inCampus(x, z) || inPoly(x, z, BRIDGE_POLY)) continue; if (walls.some(w => inBox(x, z, w, 4) && segDist(x, z, w.x1, w.z1, w.x2, w.z2)[0] < 4)) continue; if (occupied(x, z, 1)) continue; (rnd() < .85 ? treeSpots.round : treeSpots.palm).push([x, z]); placed++; }
-  for (const k of ['round', 'palm', 'royal', 'rain', 'terminalia']) treeSpots[k] = treeSpots[k].filter(([x, z, , keep, street]) => keep || ((street ? streetOK(x, z) : !occupied(x, z, -0.6)) && !walls.some(w => inBox(x, z, w, 1.5) && segDist(x, z, w.x1, w.z1, w.x2, w.z2)[0] < 1.5)));
+  const doorView = []; for (const b of BUILT) (b.doors || []).forEach((d, i) => doorView.push({ x: d.x, z: d.z, nx: d.nx, nz: d.nz, deep: d === b.entrance ? 18 : 8, half: d === b.entrance ? 5 : 3 }));
+  const blocksDoor = (x, z) => doorView.some(d => { const dx = x - d.x, dz = z - d.z, a = dx * d.nx + dz * d.nz, t = Math.abs(dx * -d.nz + dz * d.nx); return a > -1 && a < d.deep && t < d.half + (a / d.deep) * 2; }); // keep the doors and their name signs in view
+  treeSpots.shrub = treeSpots.shrub.filter(([x, z, , y]) => (y || 0) > 1 || !ROADS.some(r => r.t === "car" && !r.freeway && inBox(x, z, r.box, 2) && lineDist(x, z, r.p, r.closed)[0] < r.half)); // hedges never on the asphalt
+  for (const k of ['round', 'palm', 'royal', 'rain', 'terminalia']) treeSpots[k] = treeSpots[k].filter(([x, z, , keep, street]) => keep || (!blocksDoor(x, z) &&(street ? streetOK(x, z) : !occupied(x, z, -0.6)) && !walls.some(w => inBox(x, z, w, 1.5) && segDist(x, z, w.x1, w.z1, w.x2, w.z2)[0] < 1.5)));
   // orchards beyond the wall (visual only)
   for (let i = 0; i < 900; i++) { const x = rr(-1700, 1900), z = rr(-1500, 1400); if (inCampus(x, z) || inBox(x, z, WORLD, 20)) continue; if (ROADS.some(r => (r.freeway || r.out) && inBox(x, z, r.box, 30) && lineDist(x, z, r.p)[0] < 20)) continue; (rnd() < .7 ? treeSpots.round : treeSpots.palm).push([x, z, 0, true]); }
 }
