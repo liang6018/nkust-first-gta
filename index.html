@@ -512,6 +512,8 @@ const SURVEY = {"east":[[-84.2,-370.9],[248.3,-428.8],[249.1,-425.7],[251.8,-414
 
 const WORLD = { minX: -910, maxX: 850, minZ: -520, maxZ: 345 };
 const EAST_POLY = SURVEY.east, WEST_POLY = SURVEY.west, BRIDGE_POLY = SURVEY.bridge;
+// 敬業樓 (男生宿舍 A/B) share a low lobby block between them (satellite: flat roof with plant, curved north wall)
+SURVEY.bld.push({ n: '敬業樓 大廳', fl: 1, h: 6.2, face: '東', f: [[-176.4, -70.35], [-132.4, -70.66], [-132.4, -88.0], [-145, -88.6], [-158, -87.6], [-168, -85.8], [-176.4, -82.6]] });
 function inPoly(x, z, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, zi] = poly[i], [xj, zj] = poly[j]; if (((zi > z) !== (zj > z)) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c; } return c; }
 const inCampus = (x, z) => inPoly(x, z, EAST_POLY) || inPoly(x, z, WEST_POLY) || inPoly(x, z, BRIDGE_POLY);
 function bboxOf(pts, pad = 0) { let a = 1e9, b = -1e9, c = 1e9, d = -1e9; for (const [x, z] of pts) { a = Math.min(a, x); b = Math.max(b, x); c = Math.min(c, z); d = Math.max(d, z); } return { minX: a - pad, maxX: b + pad, minZ: c - pad, maxZ: d + pad }; }
@@ -651,7 +653,8 @@ const LOOK = {
   '智慧製造實作工廠': { en: 'Smart Manufacturing Workshop', wall: '#A9B6BD', accent: '#7F8C93', kind: 'factory', floors: 2, h: 10 },
   '實作工場(長條)': { name: '實作工廠', en: 'Workshop', wall: '#B4BCC0', accent: '#7F8C93', kind: 'factory', floors: 2, h: 9 },
   '職務宿舍': { en: 'Staff Housing', wall: '#E9E5DC', accent: '#B9B3A8', kind: 'flat', frame: '#FBFAF6', floors: 4, h: 12.5, noSign: true },
-  '敬業樓': { en: 'Jing-Ye Hall · Dormitory', wall: '#9C7A62', accent: '#A8A8A2', kind: 'dorm' },
+  '敬業樓 大廳': { name: '敬業樓 男生宿舍', en: 'Jing-Ye Hall · Men\'s Dormitory Lobby', wall: '#B9A48F', accent: '#8E8A84', kind: 'unit', frame: '#E9E3DA', floors: 1, h: 6.2, link: ['敬業樓 A', '敬業樓 B'] },
+  '敬業樓': { en: 'Jing-Ye Hall · Dormitory', wall: '#9C7A62', accent: '#A8A8A2', kind: 'dorm', link: ['敬業樓 大廳'], noCanopy: true },
   '樂群樓(學生宿舍)': { name: '樂群樓（學生宿舍）', en: 'Le-Qun Hall · Dormitory', wall: '#C0603F', accent: '#BDBDB8', kind: 'balcony', skybridge: { path: [[-414.9, 259.5], [-404, 283.6]], w: 3, both: true, truss: true } },
   '游泳館': { en: 'Natatorium', wall: '#A9AAA5', accent: '#B5583C', kind: 'pool' },
   '產業實驗園區(OSM名:產業創新園區)': { name: '產業實驗園區', en: 'Industry Park', wall: '#BFC2C2', accent: '#8F9393', kind: 'unit', frame: '#E5E7E6', floors: 2, h: 8 },
@@ -860,7 +863,7 @@ function insetPoly(pts, d) { // d: metres, or a function of the edge index (0 = 
    [name contains, [[edge index of SURVEY polygon, position 0..1 along the edge], ...]] — main entrance first. */
 const DOOR_SPEC = [
   ['游泳館', [[13, .5], [2, .35]]], ['產業實驗', [[0, .5], [2, .5]]],
-  ['樂群樓', [[3, .5], [12, .5], [18, .5], [9, .5]]], ['敬業樓 A', [[21, .5], [0, .5], [18, .5]]], ['敬業樓 B', [[8, .5], [21, .5], [6, .5], [11, .5]]],
+  ['樂群樓', [[3, .5], [12, .5], [18, .5], [9, .5]]], ['敬業樓 大廳', [[1, .5], [6, .5], [0, .161], [4, .5]]], ['敬業樓 A', [[0, .5], [21, .5], [18, .5]]], ['敬業樓 B', [[11, .716], [8, .5], [21, .5], [6, .5]]],
   ['財金', [[2, .5], [8, .5], [10, .5]]], ['圖書資訊', [[6, .5], [3, .5], [4, .5]]], ['學生活動中心', [[11, .5], [8, .5], [0, .5]]],
   ['外語學院 圓形', [[3, .5], [0, .5]]], ['外語學院', [[15, .5], [2, .5], [16, .5]]], ['管理學院', [[8, .5], [9, .5], [2, .5]]],
   ['行政大樓', [[3, .5], [0, .5], [1, .5]]], ['電機資訊', [[8, .5], [11, .5], [6, .5]]], ['工學院', [[13, .5], [8, .5], [0, .5], [11, .5]]],
@@ -913,7 +916,7 @@ function buildBuilding(b) {
     let nx = (q[1] - a[1]) / Ls, nz = -(q[0] - a[0]) / Ls; if (!ccw) { nx = -nx; nz = -nz; }
     if (inPoly((a[0] + q[0]) / 2 + nx * .5, (a[1] + q[1]) / 2 + nz * .5, pts)) { nx = -nx; nz = -nz; }
     const tt = clamp(t, 2 / Ls, 1 - 2 / Ls), x = a[0] + (q[0] - a[0]) * tt, z = a[1] + (q[1] - a[1]) * tt;
-    if (SURVEY.bld.some(o => o !== b && inPoly(x + nx * 2.5, z + nz * 2.5, o.f))) return null;
+    if (SURVEY.bld.some(o => o !== b && !(L.link || []).some(k => o.n.includes(k)) && inPoly(x + nx * 2.5, z + nz * 2.5, o.f))) return null;
     return { x, z, nx, nz, len: Ls, i, t: tt };
   };
   let doors = spec ? spec.map(([i, t]) => mkDoor(i, t)).filter(Boolean) : [];
@@ -928,12 +931,13 @@ function buildBuilding(b) {
   if (L.rotunda) buildRotunda(info, L.rotunda);
   if (L.court) buildCourt(info, L.court);
   if (L.skybridge) buildSkybridge(info, L.skybridge);
-  if (E && !L.noSign) {
+  const intoLink = E && (L.link || []).some(k => SURVEY.bld.some(o => o.n.includes(k) && inPoly(E.x + E.nx * 2, E.z + E.nz * 2, o.f))); // the main door opens inside the lobby block
+  if (E && !L.noSign && !intoLink) {
     const setback = L.arcade ? 3 : 0;
     const g = new THREE.Group(); g.position.set(E.x - E.nx * setback, 0, E.z - E.nz * setback); g.rotation.y = Math.atan2(E.nx, E.nz); scene.add(g);
     const small = h < 9;
     const sb = info.doorBase || 0; for (const sx of [-1, 1]) box(DOOR.w / 2 - .1, DOOR.h - .1, .05, matGlassDark, sx * (DOOR.w / 2 + DOOR.w / 4 + .05), sb + DOOR.h / 2, .02 - (info.colSet || 0), g, false); // glass side lights beside the doorway
-    if (!L.arcade && !small && !L.portal && !L.terrace && !L.rotunda && !L.grand && !onCarRoad(E.x + E.nx * 3.9, E.z + E.nz * 3.9, .5)) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
+    if (!L.arcade && !small && !L.portal && !L.noCanopy && !L.terrace && !L.rotunda && !L.grand && !onCarRoad(E.x + E.nx * 3.9, E.z + E.nz * 3.9, .5)) { box(12, .35, 4.2, matConcrete, 0, 3.9, 2.1, g); for (const sx of [-5.5, 5.5]) { cyl(.22, .22, 3.8, matConcrete, sx, 1.9, 3.9, g); addCircle(g.position.x + sx * E.nz + 3.9 * E.nx, g.position.z - sx * E.nx + 3.9 * E.nz, .35); } }
     if (!small && !L.base) box(L.arcade ? 18 : 10, .03, L.arcade ? 3 : 2.4, matConcrete, 0, .015, (L.arcade ? 1.5 : 1.2), g, false); // flush landing (no step blocks to clip through)
     const signW = Math.min(small ? 6 : 14, E.len * .5);
     const st = textTex([name, L.en + (L.c ? ` · ${L.c}` : '')], { w: 1024, h: 200, bg: '#22313b', fg: '#f6f1e7', sizes: [name.length > 9 ? 64 : 86, 34] });
@@ -1131,6 +1135,17 @@ function buildSpecials() {
     if (B.signMesh) B.signMesh.visible = false; // the facade sign would sit behind the portico roof
     const st = textTex([B.name, `${B.look.en} · ${B.look.c}`], { w: 2048, h: 200, bg: '#22313b', fg: '#f6f1e7', sizes: [92, 40] });
     const sg = new THREE.Mesh(new THREE.PlaneGeometry(14, 14 * 200 / 2048), new THREE.MeshStandardMaterial({ map: st, roughness: .6 })); sg.position.set(0, 7.05, 5.81); g.add(sg); } }
+  // 敬業樓 lobby → B: a covered walkway on slim posts to B's south door
+  { const Lb = by('敬業樓 男生宿舍'), Bb = BUILT.find(b => b.name.startsWith('敬業樓 B')); const d1 = Lb && Lb.doors.find(d => d.nz < -.5), d2 = Bb && Bb.doors.find(d => d.nz > .5);
+    if (d1 && d2) { const ax = d1.x, az = d1.z, bx = d2.x, bz = d2.z, L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, nx = -uz, nz = ux, ang = Math.atan2(ux, uz), mx = (ax + bx) / 2, mz = (az + bz) / 2;
+      const roofM = M(0x8e979c, { metalness: .4, roughness: .5 }), postM = M(0xe9e6df, { roughness: .6 });
+      const rf = box(3.6, .14, L, roofM, mx, 3.2, mz); rf.rotation.y = ang; const fa = box(3.7, .3, .1, postM, ax + ux * .05, 3.05, az + uz * .05); fa.rotation.y = ang;
+      for (let t = 1; t < L - .5; t += 3) for (const sg of [-1, 1]) { const x = ax + ux * t + nx * sg * 1.6, z = az + uz * t + nz * sg * 1.6; cyl(.09, .09, 3.1, postM, x, 1.55, z, scene, 8); addCircle(x, z, .14); }
+      const pv = [[ax - nx * 2 - ux * .2, az - nz * 2 - uz * .2], [ax + nx * 2 - ux * .2, az + nz * 2 - uz * .2], [bx + nx * 2, bz + nz * 2], [bx - nx * 2, bz - nz * 2]]; shapeMesh(pv, matGrayPaver, .04, 3); pavedPolys.push(pv);
+      zone('敬業樓連廊', '男生宿舍 大廳 ↔ B 棟', bboxOf(pv, 1), '連廊', 3); }
+    // aprons at the lobby's east and west doors
+    if (Lb) for (const d of Lb.doors.filter(d => Math.abs(d.nx) > .7)) { const tx = -d.nz, tz = d.nx, pv = [[d.x - tx * 4, d.z - tz * 4], [d.x + tx * 4, d.z + tz * 4], [d.x + tx * 4 + d.nx * 9, d.z + tz * 4 + d.nz * 9], [d.x - tx * 4 + d.nx * 9, d.z - tz * 4 + d.nz * 9]]; shapeMesh(pv, matGrayPaver, .035, 3); pavedPolys.push(pv); }
+  }
   // 管理學院: grey top band, cylindrical glass stair tower at the west end, checker-paved plaza with flowering hedges to the south
   { const B = by('管理學院'), E = B && B.entrance; if (E) {
     wallRing(B.pts, B.h - 3.8, B.h, facadeMat2('mgmt-top', { wall: '#8C8A85', accent: '#6f6c66', kind: 'unit', frame: '#b5b2ab' }), 3.8, 0, .08);
@@ -1182,8 +1197,9 @@ const PLAN_CFG = [
   ['產業實驗', { kind: 'office', mod: 8, stairs: 'side' }],
   ['實作工', { kind: 'workshop', open: true, stairs: 'side' }],
   ['職務宿舍', { kind: 'home', mod: 4.5, stairs: 'side' }],
-  ['樂群樓', { kind: 'dorm', mod: 4.2, stairs: 'ends' }],
-  ['敬業樓', { kind: 'dorm', mod: 4.2, stairs: 'ends' }],
+  ['樂群樓', { kind: 'dorm', mod: 4.2, stairs: 'ends', lobby: [5, 8] }],
+  ['敬業樓 男生宿舍', { kind: 'lobby', open: true, stairs: 'side' }],
+  ['敬業樓', { kind: 'dorm', mod: 4.2, stairs: 'ends', lobby: [5, 8] }],
   ['游泳館', { kind: 'gym', open: true, stairs: 'side', ground: 'pool' }],
 ];
 function planCfg(name) { for (const [k, c] of PLAN_CFG) if (name.includes(k)) return c; return { kind: 'class', mod: 9, stairs: 'center' }; }
@@ -1280,7 +1296,7 @@ function planGrid(poly, F, cfg, levels, coresIn, open) {
   for (let k = 0; k < N; k++) {
     if (lab[k] < 0) continue; const [u, v] = cellUV(G, k);
     for (const c of cores) { const [a, b] = coreAB(c, u, v); if (a >= 0 && a <= c.CL && Math.abs(b) <= c.W / 2) { lab[k] = 1; key[k] = -1; } else if (a >= -1.8 && a < 0 && Math.abs(b) <= c.W / 2 + .3) key[k] = -1; }
-    if ((Math.abs(u) <= 2.7 && v >= -1 && v <= 6.5) || nearSideDoor(F, u, v, 1.8, 4.5)) key[k] = -1; // entrance lobbies (stacked hall on every floor)
+    const LB = cfg.lobby || [2.7, 6.5]; if ((Math.abs(u) <= LB[0] && v >= -1 && v <= LB[1]) || nearSideDoor(F, u, v, cfg.lobby ? 3.5 : 1.8, cfg.lobby ? 6 : 4.5)) key[k] = -1; // entrance lobbies (stacked hall on every floor)
   }
   const nb = k => { const i = k % nu, out = []; if (i > 0) out.push(k - 1); if (i < nu - 1) out.push(k + 1); if (k >= nu) out.push(k - nu); if (k < N - nu) out.push(k + nu); return out; };
   const isCorr = k => lab[k] === 0 && key[k] < 0;
@@ -1426,6 +1442,10 @@ function planGridsFromData(PD, poly, levels, F, doorsW, cfg = {}) {
         if (meet) break;
       }
     }
+    if (cfg.lobby && fi === 0) for (const d of flDoors) { // dormitories: a proper entrance hall (mailboxes, the warden's desk) behind each door
+      const tx = -d.nz, tz = d.nx, [hw, dp] = cfg.lobby;
+      for (let a = .25; a < dp; a += .5) for (let o = -hw; o <= hw; o += .5) { const k = gI(G, ...gUV(G, d.gx - d.nx * a + tx * o, d.gz - d.nz * a + tz * o)); if (k >= 0 && lab[k] === 0) { room[k] = -1; code[k] = 2; } }
+    }
     // the corridor network is one piece, reachable from the stairs (or the main door)
     const fronts = []; for (const c of cores) { const k = gI(G, c.u - c.du * 1, c.v - c.dv * 1); if (k >= 0 && lab[k] === 0) fronts.push(k); }
     const seed = starts.length ? [starts[0]] : fronts.slice(0, 1);
@@ -1445,7 +1465,7 @@ function planGridsFromData(PD, poly, levels, F, doorsW, cfg = {}) {
         const cnt = new Map(); for (const q of c) for (const x of nb(G, q)) if (lab[x] === 0 && code[x] >= 3) cnt.set(code[x], (cnt.get(code[x]) || 0) + 1);
         const best = [...cnt].sort((a, b) => b[1] - a[1])[0]; if (best) for (const q of c) { code[q] = best[0]; room[q] = 0; } } }
     // rooms = connected pieces of each plan room
-    const comps = () => {
+    const comps = (depth = 0) => {
       const rooms = []; room.fill(-1);
       for (let k = 0; k < N; k++) {
         if (lab[k] !== 0 || code[k] < 3 || room[k] >= 0) continue;
@@ -1454,7 +1474,14 @@ function planGridsFromData(PD, poly, levels, F, doorsW, cfg = {}) {
         const [type, label] = roomsList[code[k] - 3] || ['office', ''];
         rooms.push({ id, key: -1, cells, type, label });
       }
-      for (const r of rooms) if (r.cells.length < (r.type === 'wc' || r.type === 'store' ? 6 : 14)) { for (const k of r.cells) { room[k] = -1; code[k] = 1; } r.gone = true; }
+      // rooms too small to be anything (< 8 m², closets / toilets < 4 m²) become part of the room beside them, else floor
+      let merged = false;
+      for (const r of rooms) if (r.cells.length < (r.type === 'wc' || r.type === 'store' ? 16 : 32)) {
+        const cnt = new Map(); for (const k of r.cells) for (const m of nb(G, k)) if (lab[m] === 0 && code[m] >= 3 && room[m] !== r.id) cnt.set(code[m], (cnt.get(code[m]) || 0) + 1);
+        const best = [...cnt].sort((a, b) => b[1] - a[1])[0];
+        if (best && best[1] >= 3 && depth < 3) { for (const k of r.cells) code[k] = best[0]; merged = true; } else { for (const k of r.cells) { room[k] = -1; code[k] = 1; } r.gone = true; }
+      }
+      if (merged) return comps(depth + 1);
       return rooms.filter(r => !r.gone);
     };
     // every room needs a straight 2 m run of wall onto a corridor for its door; otherwise a passage is carved to it
@@ -1527,10 +1554,26 @@ function tidyPlan(G, code, roomsList, cfg, fi, flDoors) {
     for (const k of cells) { const [x, z] = gW(G, ...cellUV(G, k)); let be = 0, bd = 1e9, bt = 0; E.forEach((e, i) => { if (e.len < 3) return; const [d, t] = segDist(x, z, e.a[0], e.a[1], e.b[0], e.b[1]); if (d < bd - .01) { bd = d; be = i; bt = t; } }); const e = E[be], m = e.len / Math.max(1, Math.round(e.len / mod)); key.set(k, be * 1000 + clamp(Math.floor(bt * e.len / m), 0, 999)); }
     const S = new Set(cells), seen = new Set(), pieces = [];
     for (const k of cells) { if (seen.has(k)) continue; const p = [k]; seen.add(k); for (let q = 0; q < p.length; q++) for (const m of nb4(p[q])) if (S.has(m) && !seen.has(m) && key.get(m) === key.get(k)) { seen.add(m); p.push(m); } pieces.push(p); }
+    pieces.sort((a, b) => b.length - a.length);
     for (const p of pieces) { const area = p.length * CELL * CELL;
-      if (area < 6) continue; // scraps stay as floor
+      if (area < 12) { // too small for a room of its own: it joins the piece beside it
+        const cnt = new Map(); for (const k of p) for (const m of nb4(k)) if (S.has(m) && code[m] >= 3 && code[m] !== code[k]) cnt.set(code[m], (cnt.get(code[m]) || 0) + 1);
+        const best = [...cnt].sort((a, b) => b[1] - a[1])[0]; if (best && best[1] >= 2) { for (const k of p) code[k] = best[0]; continue; }
+        if (area < 6) continue; }
       const t = cfg.kind === 'dorm' ? (area < 9 ? 'store' : 'dorm') : area < 12 ? 'store' : area < 30 && kind === 'class' ? 'office' : kind;
       roomsList.push([t, '']); const cc = roomsList.length + 2; for (const k of p) code[k] = cc; }
+  }
+  // 4b) dormitories: rooms the plan merged into 9–12 m blobs are split back into ~4.2 m rooms along the outer wall
+  if (cfg.kind === 'dorm') for (const c of comps(k => code[k] >= 3)) {
+    const t0 = (roomsList[code[c[0]] - 3] || [])[0]; if (t0 !== 'dorm' || c.length * CELL * CELL < 30) continue;
+    const key = new Map(); for (const k of c) { const [x, z] = gW(G, ...cellUV(G, k)); let be = 0, bd = 1e9, bt = 0; E.forEach((e, i) => { if (e.len < 3) return; const [d, t] = segDist(x, z, e.a[0], e.a[1], e.b[0], e.b[1]); if (d < bd - .01) { bd = d; be = i; bt = t; } }); key.set(k, be * 1000 + Math.floor(bt * E[be].len / mod)); }
+    const S = new Set(c), seen = new Set(), pieces = [];
+    for (const k of c) { if (seen.has(k)) continue; const p = [k]; seen.add(k); for (let q = 0; q < p.length; q++) for (const m of nb4(p[q])) if (S.has(m) && !seen.has(m) && key.get(m) === key.get(k)) { seen.add(m); p.push(m); } pieces.push(p); }
+    if (pieces.length < 2) continue;
+    pieces.sort((a, b) => b.length - a.length);
+    for (const [i, p] of pieces.entries()) { if (i === 0) continue; // the biggest keeps the old code
+      if (p.length * CELL * CELL < 9) { const cnt = new Map(); for (const k of p) for (const m of nb4(k)) if (S.has(m) && code[m] !== code[k] || (S.has(m) && !p.includes(m))) cnt.set(code[m], (cnt.get(code[m]) || 0) + 1); const best = [...cnt].sort((a, b) => b[1] - a[1])[0]; if (best) { for (const k of p) code[k] = best[0]; continue; } }
+      roomsList.push(['dorm', '']); const cc = roomsList.length + 2; for (const k of p) code[k] = cc; }
   }
   // 5) leftover scraps of floor (not lobbies, not next to the corridor) join the room they sit in
   if (!keepOpen) for (const c of comps(k => code[k] === 2)) { if (c.length >= 24 || c.some(lobby) || c.some(k => nb4(k).some(m => code[m] === 1))) continue; const m = majority(c, v => v >= 3); if (m >= 3) for (const k of c) code[k] = m; }
@@ -1583,6 +1626,7 @@ function buildInterior(info, L, levels, pts, inner, innerCore, arcade, gx, gz) {
   else if (arcade) { gr = planGrid(innerCore, F, cfg, levels, null, groundOpen); up = planGrid(inner, F, cfg, levels, gr.cores, cfg.open); }
   else { up = planGrid(inner, F, cfg, levels, null, cfg.open); gr = cfg.ground ? planGrid(innerCore, F, cfg, levels, up.cores, groundOpen) : up; }
   if (!Gs) for (const G of new Set([up, gr])) G.rooms.forEach((r, i) => { r.type = cfg.alt && cfg.altEvery && i % cfg.altEvery === cfg.altEvery - 1 ? cfg.alt : cfg.kind; });
+  if (cfg.kind === 'dorm') for (const G of new Set(Gs ? Gs.grids : [up, gr])) splitDormRooms(G, cfg.mod || 4.2);
   const group = new THREE.Group(); group.visible = false; scene.add(group);
   const I = { name: info.name, poly: pts, box: bboxOf(pts, 1), vis: bboxOf(pts, 14), levels, h, group, cfg, rooms: [], cores: [], door: [gx, gz], doorsXZ: (info.doorsIn || []).map(d => [d.gx, d.gz]) };
   INTERIORS.push(I); info.interior = I;
@@ -1639,6 +1683,28 @@ const INT_MAT = {
   machine: M(0xd9a321, { roughness: .5, metalness: .3 }), machineG: M(0x6d7a80, { roughness: .5, metalness: .4 }),
 };
 
+/* dormitories: cut every oversized room into ~4.2 m rooms side by side along its corridor wall (each keeps a corridor
+   frontage for its door); slivers without one go back to the neighbouring strip */
+function splitDormRooms(G, mod) {
+  const { nu, lab, room } = G, N = nu * G.nv, corr = c => c >= 0 && c < N && lab[c] === 0 && room[c] < 0;
+  for (const r of [...G.rooms]) {
+    if ((r.type && r.type !== 'dorm') || r.cells.length * CELL * CELL < 30) continue;
+    let i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1; const side = [0, 0, 0, 0]; // corridor on -i, +i, -j, +j
+    for (const c of r.cells) { const i = c % nu, j = (c / nu) | 0; i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j); if (i > 0 && corr(c - 1)) side[0]++; if (i < nu - 1 && corr(c + 1)) side[1]++; if (corr(c - nu)) side[2]++; if (corr(c + nu)) side[3]++; }
+    const alongI = side[2] + side[3] >= side[0] + side[1]; // corridor runs along i → cut across i
+    const span = alongI ? i1 - i0 + 1 : j1 - j0 + 1, per = Math.max(6, Math.round(mod / CELL)), n = Math.round(span / per);
+    if (n < 2) continue;
+    const step = span / n, strips = Array.from({ length: n }, () => []);
+    for (const c of r.cells) { const q = alongI ? c % nu - i0 : ((c / nu) | 0) - j0; strips[Math.min(n - 1, Math.floor(q / step))].push(c); }
+    const front = cs => cs.filter(c => { const i = c % nu; return alongI ? corr(c - nu) || corr(c + nu) : (i > 0 && corr(c - 1)) || (i < nu - 1 && corr(c + 1)); }).length;
+    // strips without at least 1.5 m of corridor frontage (or too small) join the previous strip
+    for (let k = n - 1; k > 0; k--) if (front(strips[k]) < 3 || strips[k].length < 28) { strips[k - 1].push(...strips[k]); strips.splice(k, 1); }
+    if (strips.length > 1 && (front(strips[0]) < 3 || strips[0].length < 28)) { strips[1].push(...strips[0]); strips.shift(); }
+    if (strips.length < 2) continue;
+    r.cells = strips[0];
+    for (const cs of strips.slice(1)) { const nr = { id: G.rooms.length, key: r.key, cells: cs, type: 'dorm', label: '' }; G.rooms.push(nr); for (const c of cs) room[c] = nr.id; }
+  }
+}
 /* walls between grid cells of different spaces: room|room partitions, room|corridor walls with doors and a window band */
 function buildGridWalls(G, y, ceil, WB, GB, put, cfg, k, I, L) {
   for (let it = 0; it < 6; it++) if (gridWallsOnce(G, y, ceil, WB, GB, put, cfg, it === 5)) return;
@@ -1766,7 +1832,10 @@ function gridWallsOnce(G, y, ceil, WB, GB, put, cfg, force) {
 /* room frame along its outer wall: t along the wall, d inward */
 function roomFrame(G, r) {
   let e = G.E && G.E[Math.floor(r.key / 1000)];
-  const tx = e ? (e.b[0] - e.a[0]) / e.len : G.F.U[0], tz = e ? (e.b[1] - e.a[1]) / e.len : G.F.U[1];
+  let tx = e ? (e.b[0] - e.a[0]) / e.len : G.F.U[0], tz = e ? (e.b[1] - e.a[1]) / e.len : G.F.U[1];
+  { // room walls run along the plan grid: line the furniture up with the grid axis closest to that outer wall
+    const V = [-G.F.U[1], G.F.U[0]], du = tx * G.F.U[0] + tz * G.F.U[1], dv = tx * V[0] + tz * V[1];
+    if (Math.abs(du) >= Math.abs(dv)) { tx = G.F.U[0] * Math.sign(du || 1); tz = G.F.U[1] * Math.sign(du || 1); } else { tx = V[0] * Math.sign(dv); tz = V[1] * Math.sign(dv); } }
   let nx = -tz, nz = tx; const ax = e ? e.a[0] : G.F.ox, az = e ? e.a[1] : G.F.oz;
   const [mx, mz] = e ? [(e.a[0] + e.b[0]) / 2 + nx * .6, (e.a[1] + e.b[1]) / 2 + nz * .6] : [0, 0];
   if (e && !inPoly(mx, mz, G.poly)) { nx = -nx; nz = -nz; }
@@ -1783,8 +1852,14 @@ function furnishRoom(G, r, y, ceil, put, cfg, k, type) {
   const nearDoor = (t, d, m = 1.3) => (r.doors || []).some(dr => Math.hypot(...[0, 1].map(i => W(t, d)[i] - dr.P[i])) < m);
   const ok = (t, d, m = 0) => inR(t, d, m) && !nearDoor(t, d, 1.4 + m);
   const clear = (t, d) => nearDoor(t, d, 1.5);
-  const col = (t, d, rad, h2 = 1.6) => { if (nearDoor(t, d, 1.0 + rad)) return; const [x, z] = W(t, d); addCircle(x, z, rad, y - .5, y + h2); };
-  const P = (kind, t, d, yy, sx, sy, sz, ry = rotT) => { if (kind !== 'light' && clear(t, d)) return; const [x, z] = W(t, d); put(kind, x, y + yy, z, ry, sx, sy, sz); };
+  const inCell = (x, z) => { const c = gI(G, ...gUV(G, x, z)); return c >= 0 && G.room[c] === r.id; };
+  const col = (t, d, rad, h2 = 1.6) => { if (nearDoor(t, d, 1.0 + rad)) return; const [x, z] = W(t, d); if (inCell(x, z)) addCircle(x, z, rad, y - .5, y + h2); };
+  // every piece must lie wholly inside this room's cells (the walls run along the cell edges), else it is left out
+  const placed = [];
+  const fits = (x, z, ry, sx, sz) => { const cx = Math.cos(ry), sn = Math.sin(ry), hx = Math.max(0, sx / 2 - .07), hz = Math.max(0, sz / 2 - .07);
+    for (const a of [-1, 0, 1]) for (const b of [-1, 0, 1]) if (!inCell(x + cx * hx * a + sn * hz * b, z - sn * hx * a + cx * hz * b)) return false; return true; };
+  const PG = items => { if (!items.every(([k, t, d, , sx, , sz, ry]) => { if (clear(t, d)) return false; const [x, z] = W(t, d); return fits(x, z, ry ?? rotT, sx, sz); })) return false; for (const it of items) P(...it); return true; }; // a set goes in whole or not at all
+  const P = (kind, t, d, yy, sx, sy, sz, ry = rotT) => { if (kind !== 'light' && clear(t, d)) return false; const [x, z] = W(t, d); if (kind !== 'light' && !fits(x, z, ry, sx, sz)) return false; put(kind, x, y + yy, z, ry, sx, sy, sz); placed.push([x, z, kind]); return true; };
   const tm = (f.t0 + f.t1) / 2, dm = (f.d0 + f.d1) / 2, tl = f.t1 - f.t0, dl = f.d1 - f.d0;
   const life = { type, y, seats: [], teach: null, c: W(tm, dm), id: r.id, label: r.label || '' };
   const fwd = Math.atan2(-f.tx, -f.tz); // seated students face the board (toward t0)
@@ -1795,11 +1870,9 @@ function furnishRoom(G, r, y, ceil, put, cfg, k, type) {
     for (let t = tStart; t < f.t1 - .55; t += 1.15) {
       let any = false;
       for (let d = f.d0 + 1.0; d < f.d1 - .5; d += pairW + 1.0) for (const dd of [0, .66]) {
-        const d2 = d + dd; if (d2 > f.d1 - .5 || !ok(t, d2, .35) || !ok(t + .45, d2, .3)) continue; any = true;
-        P(desk, t, d2, .73, .62, .04, .46); P('steel', t - .2, d2, .4, .58, .6, .03);
-        if (pc) { P('dark', t - .1, d2, 1.0, .5, .32, .04); P('dark', t - .02, d2, .76, .18, .03, .14); }
-        P(chair, t + .42, d2, .45, .42, .05, .42); P(chair, t + .63, d2, .7, .42, .42, .04);
-        col(t + .1, d2, .34); life.seats.push([...W(t + .45, d2), fwd]);
+        const d2 = d + dd; if (d2 > f.d1 - .5 || !ok(t, d2, .35) || !ok(t + .45, d2, .3)) continue;
+        if (!PG([[desk, t, d2, .73, .62, .04, .46], ['steel', t - .2, d2, .4, .58, .6, .03], ...(pc ? [['dark', t - .1, d2, 1.0, .5, .32, .04], ['dark', t - .02, d2, .76, .18, .03, .14]] : []), [chair, t + .42, d2, .45, .42, .05, .42], [chair, t + .63, d2, .7, .42, .42, .04]])) continue;
+        any = true; col(t + .1, d2, .34); life.seats.push([...W(t + .45, d2), fwd]);
       }
       if (any) rows++;
     }
@@ -1826,8 +1899,10 @@ function furnishRoom(G, r, y, ceil, put, cfg, k, type) {
         if (ok(f.t1 - .5, dm, .3)) P('shelf', f.t1 - .3, dm, 1.0, Math.min(2.4, dl - 1.5), 2.0, .4); if (ok(tm, f.d0 + .6, .4)) { P('sofa', tm, f.d0 + .5, .3, .8, .6, 1.9); P('sofa', tm, f.d0 + .15, .65, .2, .7, 1.9); col(tm, f.d0 + .5, .7); } break; }
       for (let t = f.t0 + 1.6; t < f.t1 - 1.2; t += 3.2) for (let d = f.d0 + 1.6; d < f.d1 - 1.4; d += 3.0) {
         if (!ok(t, d, 1.1)) continue;
-        for (const [a, b] of [[-.4, -.75], [.4, -.75], [-.4, .75], [.4, .75]]) { P('woodL', t + a * 1.9, d + b * .9, .74, .7, .04, 1.4); P('chairB', t + a * 1.9, d + b * 1.6, .45, .45, .05, .45); life.seats.push([...W(t + a * 1.9, d + b * 1.6), Math.atan2(-f.nx * Math.sign(b), -f.nz * Math.sign(b))]); P('dark', t + a * 1.9, d + b * .55, 1.0, .04, .3, .5); }
-        P('steel', t, d, 1.0, .04, .5, 3.0); col(t - .8, d, .9); col(t + .8, d, .9);
+        const Q = [['steel', t, d, 1.0, .04, .5, 3.0]]; for (const [a, b] of [[-.4, -.75], [.4, -.75], [-.4, .75], [.4, .75]]) Q.push(['woodL', t + a * 1.9, d + b * .9, .74, .7, .04, 1.4], ['chairB', t + a * 1.9, d + b * 1.6, .45, .45, .05, .45], ['dark', t + a * 1.9, d + b * .55, 1.0, .04, .3, .5]);
+        if (!PG(Q)) continue;
+        for (const [a, b] of [[-.4, -.75], [.4, -.75], [-.4, .75], [.4, .75]]) life.seats.push([...W(t + a * 1.9, d + b * 1.6), Math.atan2(-f.nx * Math.sign(b), -f.nz * Math.sign(b))]);
+        col(t - .8, d, .9); col(t + .8, d, .9);
       }
       for (let t = f.t0 + .6; t < f.t1 - .6; t += 1.0) if (ok(t, f.d1 - .3, .2)) { P('steel', t, f.d1 - .3, .7, .45, 1.4, .9); col(t, f.d1 - .3, .35); }
       if (ok(f.t0 + .5, f.d0 + .5, .3)) { P('plant', f.t0 + .5, f.d0 + .5, .5, .45, 1.0, .45); col(f.t0 + .5, f.d0 + .5, .3); }
@@ -1852,18 +1927,23 @@ function furnishRoom(G, r, y, ceil, put, cfg, k, type) {
       break;
     }
     case 'dorm': case 'home': {
-      // 上床下桌: loft beds along both partition walls, desks underneath, wardrobes by the door
-      for (const [ts, s] of [[f.t0 + .5, 1], [f.t1 - .5, -1]]) for (let d = f.d0 + 1.1; d < f.d1 - 1.4; d += 2.1) {
-        if (!inR(ts, d, .3)) continue;
-        P('woodL', ts, d, 1.62, 2.0, .12, .98); P('mattress', ts, d, 1.75, 1.9, .14, .9); P('wood', ts - s * .45, d - .95, .85, .05, 1.7, .05); P('wood', ts - s * .45, d + .95, .85, .05, 1.7, .05);
-        P('woodL', ts, d, .74, 1.2, .04, .9); P('chairB', ts + s * .65, d, .45, .42, .05, .42); col(ts, d, .55, 1.4);
-        if (type === 'dorm' && ok(ts, d - .8, .2)) P('blue', ts + s * .2, d - .85, 1.0, .4, .3, .3);
-      }
+      // 上床下桌: loft beds along both partition walls, desks underneath, wardrobes by the door — each bed slides along / off
+      // the wall until the whole set fits the room, and never overlaps another bed
+      const beds = [];
+      for (const s of [1, -1]) { let lastD = -1e9; const ts0 = s > 0 ? f.t0 + .5 : f.t1 - .5;
+        for (let d = f.d0 + 1.05; d < f.d1 - .95; d += .35) { if (d - lastD < 2.1) continue;
+          for (let off = 0; off <= .76; off += .25) { const ts = ts0 + s * off; if (beds.some(([bt, bd]) => Math.abs(bt - ts) < 1.25 && Math.abs(bd - d) < 2.05)) continue;
+            if (!inR(ts, d, .3) || !PG([['woodL', ts, d, 1.62, 2.0, .12, .98], ['mattress', ts, d, 1.75, 1.9, .14, .9], ['wood', ts - s * .45, d - .95, .85, .05, 1.7, .05], ['wood', ts - s * .45, d + .95, .85, .05, 1.7, .05], ['woodL', ts, d, .74, 1.2, .04, .9], ['chairB', ts + s * .65, d, .45, .42, .05, .42]])) continue;
+            beds.push([ts, d]); lastD = d; col(ts, d, .55, 1.4); life.seats.push([...W(ts + s * .65, d), Math.atan2(-f.tx * s, -f.tz * s)]);
+            if (type === 'dorm' && ok(ts, d - .8, .2)) P('blue', ts + s * .2, d - .85, 1.0, .4, .3, .3);
+            break; } } }
       if (inR(tm, f.d1 - .5, .25)) { P('wood', tm - .6, f.d1 - .45, 1.0, .55, 2.0, .8); col(tm - .6, f.d1 - .45, .45); }
       if (type === 'home' && ok(tm, dm, .6)) { P('sofa', tm, dm, .3, .8, .5, 1.6); P('woodL', tm, dm + 1.1, .4, .6, .04, .9); col(tm, dm, .7); }
       break;
     }
   }
+  // only keep seats that ended up with a chair / stool / sofa under them
+  life.seats = life.seats.filter(([sx, sz]) => placed.some(([x, z, k]) => /chair|dark|sofa|steel/.test(k) && Math.hypot(x - sx, z - sz) < .45));
   return life;
 }
 
@@ -1876,8 +1956,29 @@ function furnishOpen(G, y, ceil, put, kind, k, info, I) {
   const col = (u, v, r, h2 = 1.8) => { const [x, z] = gW(G, u, v); addCircle(x, z, r, y - .5, y + h2); };
   const U0 = G.u0, U1 = G.u0 + G.nu * CELL, V1 = G.v0 + G.nv * CELL, V0 = G.code ? G.v0 + 2 : null;
   if (open && !G.code) for (let v = V0 ?? 2; v < V1; v += 4) for (let u = U0 + 2; u < U1; u += 4) { const c = gI(G, u, v); if (c >= 0 && G.lab[c] === 0 && G.dist[c] > 1) P('light', u, v, ceil - y - .03, .6, .04, 1.2); }
-  if (!open && kind !== 'counter' && kind !== 'canteen') return;
+  if (kind === 'dorm' && k === 0) { // the entrance hall: warden's desk, mailboxes and a sofa by each door
+    const okC = (x, z) => { const c = gI(G, ...gUV(G, x, z)); return c >= 0 && G.lab[c] === 0 && G.room[c] < 0 && G.dist[c] > .5 && !(G.clear && G.clear[c]); };
+    const okBox = (x, z, tx, tz, w, d) => { for (const a of [-w / 2, 0, w / 2]) for (const b of [-d / 2, 0, d / 2]) if (!okC(x + tx * a - tz * b, z + tz * a + tx * b)) return false; return true; };
+    (I.doorsXZ || []).forEach(([gx, gz], i) => { const d = (info.doorsIn || [])[i]; if (!d || Math.abs((d.y0 ?? y) - y) > .5) return; const nx = -d.nx, nz = -d.nz, tx = -nz, tz = nx, ry = Math.atan2(nx, nz);
+      for (const sd of [1, -1]) { const x = gx + nx * 3.2 + tx * sd * 3.2, z = gz + nz * 3.2 + tz * sd * 3.2; if (!okBox(x, z, nx, nz, 1.4, 2.6)) continue;
+        if (sd === 1) { put('woodL', x, y + .55, z, ry, 2.2, 1.1, .7); put('dark', x - nx * .1, y + 1.2, z - nz * .1, ry, .5, .3, .04); put('chairB', x + nx * .8, y + .45, z + nz * .8, ry, .45, .05, .45); addCircle(x, z, 1.1, y - .5, y + 1.6); }
+        else { put('steel', x, y + .9, z, ry, 2.4, 1.6, .4); for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) put('dark', x - tx * (1.0 - c * .4) + nx * .21, y + .35 + r * .38, z - tz * (1.0 - c * .4) + nz * .21, ry, .32, .3, .01); addCircle(x, z, 1.1, y - .5, y + 1.8); }
+      }
+      const sx = gx + nx * 5.6, sz = gz + nz * 5.6; if (okBox(sx, sz, nx, nz, 2.2, 1.2)) { put('sofa', sx, y + .3, sz, ry + Math.PI / 2, .8, .5, 1.9); put('sofa', sx + nx * .35, y + .65, sz + nz * .35, ry + Math.PI / 2, .2, .7, 1.9); addCircle(sx, sz, .9, y - .5, y + 1.2); OPEN_SEATS.push([sx - nx * .1, sz - nz * .1, ry + Math.PI, y, 'read']); }
+    });
+    return;
+  }
+  if (!open && kind !== 'counter' && kind !== 'canteen' && kind !== 'lobby') return;
   switch (kind) {
+    case 'lobby': { // dormitory lobby: front desk at the back, sofa groups, vending machines, mailbox wall
+      let vb = 0; for (let v = V1; v > 0; v -= .5) if (free(0, v, 1.2)) { vb = v; break; }
+      if (vb > 7) { P('woodL', 0, vb - .5, .55, 7, 1.1, .8); for (let o = -3; o <= 3; o += 1) col(o, vb - .5, .6); for (const o of [-2, 0, 2]) { P('dark', o, vb - .3, 1.3, .55, .35, .04); P('chairB', o, vb + .3, .45, .45, .05, .45); } P('white', 0, vb - .05, 2.6, 5, .5, .04); }
+      for (let v = 6; v < vb - 3; v += 4.2) for (let u = U0 + 3.2; u < U1 - 3; u += 5.2) { if (!free(u, v, 1.9)) continue;
+        for (const sd of [-1, 1]) { P('sofa', u, v + sd * 1.1, .3, 1.9, .5, .8); P('sofa', u, v + sd * 1.45, .65, 1.9, .7, .2); const [sx, sz] = gW(G, u, v + sd * 1.0), [cx, cz] = gW(G, u, v); OPEN_SEATS.push([sx, sz, Math.atan2(cx - sx, cz - sz), y, 'read']); }
+        P('woodL', u, v, .4, 1.2, .04, .7); P('plant', u + 1.5, v, .55, .45, 1.1, .45); col(u, v, 1.6, 1.2); }
+      for (let u = U0 + 1; u < U1 - 1; u += 1.1) { const v = 3; if (!free(u, v, .5)) continue; if (Math.abs(u) < 6) continue; P('red', u, v, .9, .9, 1.8, .75); P('white', u, v - .39, 1.2, .6, .7, .02); col(u, v, .55, 2); }
+      break;
+    }
     case 'library':
       if (k === 0) { if (free(4, 6, 1.6)) { P('wood', 4, 6, .55, 3.2, 1.1, .7); col(3, 6, .6); col(5, 6, .6); } for (let v = V0 ?? 9; v < V1; v += 3) for (let u = U0 + 3; u < U1 - 2; u += 3.4) if (free(u, v, 1.1) && G.dist[gI(G, u, v)] < 6) { P('woodL', u, v, .74, .9, .05, 1.6); for (const s of [-1, 1]) { P('chairO', u, v + s * .75, .45, .42, .05, .42); { const [sx, sz] = gW(G, u, v + s * .75), [cx, cz] = gW(G, u, v); OPEN_SEATS.push([sx, sz, Math.atan2(cx - sx, cz - sz), y, 'read']); } } col(u, v, .9); } break; }
       for (let v = V0 ?? 3; v < V1; v += 2.6) for (let u = U0 + 2; u < U1 - 2; u += 3.4) { if (!free(u, v, 1.6)) continue; P('shelf', u, v, 1.05, 2.8, 2.1, .5, rotV); for (const o of [-.95, 0, .95]) col(u + o, v, .4, 2.2); }
@@ -2648,7 +2749,7 @@ function buildFurniture() {
   for (const n of ['財金學院', '游泳館']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance; const x = E.x + E.nx * 9 + E.nz * 12, z = E.z + E.nz * 9 - E.nx * 12; if (!occupied(x, z, 2)) yb(x, z, Math.atan2(E.nx, E.nz) + Math.PI / 2, n); }
   { const W = SURVEY.anchors['卓越路大門（西校區，南端）']; yb(W[0] + 16, W[1] - 14, 0, '卓越路大門'); }
   // students' own bikes parked by the dorm doors
-  for (const n of ['敬業樓 A', '敬業樓 B', '樂群樓']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance;
+  for (const n of ['敬業樓 男生宿舍', '敬業樓 B', '樂群樓']) { const b = byName(n); if (!b || !b.entrance) continue; const E = b.entrance;
     for (const side of [1, -1]) { const x0 = E.x + E.nx * 4 + E.nz * side * 4.5, z0 = E.z + E.nz * 4 - E.nx * side * 4.5; if (occupied(x0, z0, .5)) continue; for (let k = 0; k < 3; k++) { const x = x0 + E.nz * side * k * .8, z = z0 - E.nx * side * k * .8; if (!occupied(x, z, .3)) BIKE_SPOTS.push([x, z, Math.atan2(E.nx, E.nz) + rr(-.1, .1)]); } break; } }
   // sculptures: red steel "number fence" in front of 外語學院, white leaf sculpture in front of 教學研究大樓
   { const b = byName('外語學院'); if (b && b.entrance) { const E = b.entrance; for (let k = 0; k < 14; k++) { const t = 14 + (k - 6.5) * .7, x = E.x + E.nx * 9 + E.nz * t, z = E.z + E.nz * 9 - E.nx * t; box(.08, rr(1.2, 2.6), .08, M(0xc8232c, { metalness: .4 }), x, .9, z); addCircle(x, z, .12); } } }
@@ -2842,6 +2943,9 @@ const alloyGeo = (() => { // 5 twin-spoke alloy with hub, lip and the brake disc
 })();
 const carTireGeo = (() => { const g = new THREE.TorusGeometry(.27, .085, 10, 28).rotateY(Math.PI / 2); const c = new THREE.CylinderGeometry(.33, .33, .2, 28, 1, true).rotateZ(Math.PI / 2); return mergeGeometries([g.toNonIndexed(), c.toNonIndexed()]); })();
 const scRimGeo = (() => { const a = alloyGeo.clone().scale(.45, .72, .72).translate(-.05, 0, 0), b = alloyGeo.clone().scale(-.45, .72, .72).translate(.05, 0, 0); return mergeGeometries([a, b]); })();
+const paintCache = {};
+const paintMat = (color, matte) => paintCache[color + (matte ? 'm' : '')] ||= matte ? new THREE.MeshStandardMaterial({ color, roughness: .55, metalness: .2 }) : new THREE.MeshPhysicalMaterial({ color, metalness: .5, roughness: .28, clearcoat: 1, clearcoatRoughness: .05 });
+const bareGeo = (geos, color) => { const out = geos.map(g => { const q = (g.index ? g.toNonIndexed() : g.clone()); for (const k of Object.keys(q.attributes)) if (k !== 'position' && k !== 'normal') q.deleteAttribute(k); if (color !== undefined) { const c = new THREE.Color(color), n = q.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3); q.setAttribute('color', new THREE.BufferAttribute(a, 3)); } return q; }); return mergeGeometries(out); };
 function partsBin() {
   const bins = {}, m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), col = new THREE.Color();
   return {
@@ -2862,7 +2966,7 @@ function profileGeo(pts, width, bevel, belt, taper, curves, topY) {
   const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]);
   for (let i = 1; i < pts.length; i++) { const p = pts[i]; if (p.length === 4) sh.quadraticCurveTo(p[2], p[3], p[0], p[1]); else if (p.arc) sh.absarc(p.arc[0], p.arc[1], p.arc[2], Math.PI, 0, true); else sh.lineTo(p[0], p[1]); }
   const depth = width - bevel * 2;
-  const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel * .8, bevelSegments: 3, curveSegments: curves || 10 });
+  const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel * .8, bevelSegments: 2, curveSegments: curves || 7 });
   g.translate(0, 0, -depth / 2); g.rotateY(-Math.PI / 2); // shape x becomes world z (the nose is +z), the extrusion runs across x
   if (belt !== undefined) { const P = g.attributes.position; let top = topY ?? -1e9; if (topY === undefined) for (let i = 0; i < P.count; i++) top = Math.max(top, P.getY(i)); for (let i = 0; i < P.count; i++) { const y = P.getY(i); if (y > belt) P.setX(i, P.getX(i) * (1 - taper * Math.min(1, (y - belt) / (top - belt)))); } }
   g.computeVertexNormals(); return g;
@@ -2876,6 +2980,12 @@ const CAR_SPECS = {
   suv: { W: 1.9, wf: 1.45, wr: -1.4, belt: 1.12, hl: .8, tl: 1.08, ws: 9, rw: 11,
     body: [[-2.3, .36], [-1.84, .36], { arc: [-1.4, .38, .45] }, [1.0, .36], { arc: [1.45, .38, .45] }, [2.3, .36], [2.42, .75, 2.44, .5], [2.22, 1.0, 2.4, .98], [1.1, 1.1, 1.7, 1.1], [.25, 1.72, .6, 1.62], [-1.9, 1.78, -.8, 1.8], [-2.32, 1.3, -2.3, 1.7], [-2.36, .55, -2.38, .95], [-2.3, .36, -2.4, .4]],
     glass: [[1.05, 1.12], [.25, 1.68, .55, 1.58], [-1.9, 1.74, -.8, 1.76], [-2.25, 1.14, -2.25, 1.6]] },
+  hatch: { W: 1.76, wf: 1.3, wr: -1.25, belt: .98, hl: .66, tl: .9, ws: 9, rw: 11,
+    body: [[-2.0, .3], [-1.65, .3], { arc: [-1.25, .33, .4] }, [.92, .3], { arc: [1.3, .33, .4] }, [1.95, .3], [2.08, .6, 2.1, .38], [1.9, .82, 2.06, .8], [.85, .95, 1.4, .92], [-.05, 1.45, .35, 1.38], [-1.55, 1.48, -.8, 1.5], [-2.0, 1.05, -1.95, 1.42], [-2.06, .55, -2.08, .85], [-2.0, .3, -2.08, .36]],
+    glass: [[.8, .98], [-.03, 1.4, .33, 1.33], [-1.5, 1.43, -.8, 1.45], [-1.92, 1.06, -1.9, 1.38]] },
+  coupe: { W: 1.9, wf: 1.45, wr: -1.35, belt: .86, hl: .56, tl: .78, ws: 9, rw: 11, spoiler: true,
+    body: [[-2.25, .26], [-1.78, .26], { arc: [-1.35, .33, .43] }, [1.02, .26], { arc: [1.45, .33, .43] }, [2.2, .26], [2.36, .5, 2.4, .32], [2.1, .66, 2.34, .64], [.7, .86, 1.4, .82], [-.3, 1.24, .15, 1.22], [-1.2, 1.2, -.75, 1.27], [-2.15, .9, -1.8, 1.08], [-2.3, .5, -2.32, .8], [-2.25, .26, -2.32, .3]],
+    glass: [[.65, .88], [-.28, 1.2, .12, 1.17], [-1.15, 1.17, -.75, 1.22], [-1.95, .92, -1.65, 1.06]] },
   van: { W: 1.84, wf: 1.5, wr: -1.4, belt: 1.12, hl: .74, tl: 1.02, ws: 8, rw: 10,
     body: [[-2.35, .34], [-1.84, .34], { arc: [-1.4, .36, .44] }, [1.06, .34], { arc: [1.5, .36, .44] }, [2.3, .34], [2.42, .7, 2.44, .45], [2.15, 1.05, 2.38, 1.0], [1.3, 1.95, 1.75, 1.6], [-2.25, 2.0, -.5, 2.04], [-2.38, 1.5, -2.38, 1.95], [-2.4, .55, -2.42, 1.0], [-2.35, .34, -2.42, .38]],
     glass: [[2.08, 1.1], [1.28, 1.9, 1.7, 1.55], [-2.2, 1.95, -.5, 1.99], [-2.33, 1.15, -2.33, 1.6]] },
@@ -2897,7 +3007,8 @@ function makeCar(color, kind = 'sedan') {
   if (!C.glass) { C.body.computeBoundingBox(); const top = C.body.boundingBox.max.y; C.glass = profileGeo([...S.glass, S.glass[0]], W + .09, 0, S.belt, .14, 8, top); C.screens = [S.ws, S.rw].map(i => curveGlass(S.body[i - 1], S.body[i], W, S.belt, top)); } // side glass just proud of the body, same tumblehome
   const P = partsBin(), bY = S.belt;
   const zF = S.body.reduce((m, p) => Math.max(m, p[0] ?? -9), -9) + .07, zR = S.body.reduce((m, p) => Math.min(m, p[0] ?? 9), 9) - .07; // the bevel grows the outline by ~7 cm
-  P.add(C.body, paint); P.add(C.glass, matScreen, 0, .004); for (const sc of C.screens) P.add(sc, matScreen);
+  C.glassAll ||= bareGeo([C.glass, ...C.screens]);
+  const bm = new THREE.Mesh(C.body, paintMat(color)); bm.castShadow = true; g.add(bm); g.add(new THREE.Mesh(C.glassAll, matScreen)); // shared per model: one upload for every car of the kind
   const gTop = S.glass[2][1], gz = (S.glass[1][0] + S.glass[2][0]) / 2;
   for (const s of [-1, 1]) {
     P.add(boxGeo, T.black, s * (W * .5 * (1 - .14 * .45) + .02), (bY + gTop) / 2, gz + .05, 0, 0, s * .07, .03, gTop - bY, .14); // B pillar
@@ -2920,6 +3031,7 @@ function makeCar(color, kind = 'sedan') {
   P.add(boxGeo, T.black, 0, .42, zF - .04, 0, 0, 0, W * .72, .12, .1); P.add(boxGeo, T.plate, 0, .43, zF + .02, 0, 0, 0, .52, .13, .03);
   P.add(boxGeo, T.black, 0, .4, zR + .03, 0, 0, 0, W * .8, .14, .12); for (const s of [-1, 1]) P.add(new THREE.CylinderGeometry(.045, .05, .14, 12).rotateX(Math.PI / 2), T.chrome, s * .5, .38, zR - .02);
   P.add(boxGeo, T.plate, 0, S.tl - .2, zR - .02, 0, 0, 0, .52, .13, .03);
+  if (S.spoiler) { P.add(boxGeo, T.black, 0, .99, zR + .2, -.12, 0, 0, W * .8, .03, .22); for (const s of [-1, 1]) P.add(boxGeo, T.black, s * W * .3, .95, zR + .22, 0, 0, 0, .04, .08, .12); for (const s of [-1, 1]) P.add(boxGeo, T.black, s * .35, gy - .02, zF - .02, 0, 0, 0, .3, .12, .06); } // ducktail spoiler, extra intakes
   if (kind === 'suv') for (const s of [-1, 1]) P.add(boxGeo, T.chrome, s * W * .36, S.glass[2][1] + .08, gz - .3, 0, 0, 0, .05, .04, 1.9); // roof rails
   if (kind === 'sedan' || kind === 'taxi') P.add(boxGeo, matScreen, 0, S.glass[2][1] + .068, gz + .1, 0, 0, 0, W * .55, .01, .7); // sunroof
   if (kind === 'taxi') P.add(boxGeo, M(0xfafafa, { emissive: 0xffe066, emissiveIntensity: .3 }), 0, S.glass[2][1] + .2, gz, 0, 0, 0, .7, .22, .3);
@@ -2934,47 +3046,79 @@ function makeCar(color, kind = 'sedan') {
   return { group: g, wheels, headM, tailM };
 }
 const matRim = new THREE.MeshStandardMaterial({ color: 0xd9dde0, metalness: 1, roughness: .2 }), matRimDark = new THREE.MeshStandardMaterial({ color: 0x2e3135, metalness: .6, roughness: .45, envMapIntensity: .5 });
-/* scooter: Taiwan-style 125 cc — smooth bodywork, LED face, dark alloys with a front disc, chrome rail and mirrors */
+/* scooters, three kinds seen all over campus:
+   retro  — rounded Vespa-like bodywork, chrome rail, V-shaped LED brows
+   gogoro — electric: crisp flat panels, X-shaped LED face, single-sided swing arm, no exhaust, quiet motor whine
+   jet    — sporty 125 cc (SYM JET style): sharp split headlights, kicked-up tail, two-tone panels, sport exhaust */
 const scooterGeo = {};
-function makeScooter(color) {
-  const g = new THREE.Group(), paint = T.paint(color);
-  const G = scooterGeo.g ||= {
-    rear: profileGeo([[-.1, .36], [-.06, .62, -.13, .5], [0, .76], [-.84, .76], [-.96, .62, -.95, .74], [-.78, .46, -.92, .48], [-.4, .38]], .42, .08, undefined, 0, 8),
-    front: profileGeo([[.34, .34], [.6, .36], [.74, .6, .73, .42], [.62, .92, .76, .82], [.46, 1.0, .57, .99], [.37, .96], [.31, .6, .33, .8]], .44, .07, undefined, 0, 8),
-    floor: profileGeo([[-.12, .3], [.42, .3], [.42, .37], [-.12, .37]], .38, .02),
-    seat: profileGeo([[-.02, .78], [-.84, .78], [-.9, .87, -.91, .81], [-.56, .91], [-.33, .87], [-.08, .92, -.2, .87], [.02, .85]], .36, .04, undefined, 0, 8),
+const SCOOTER_BODY = {
+  retro: { rear: [[-.1, .36], [-.06, .62, -.13, .5], [0, .76], [-.84, .76], [-.96, .62, -.95, .74], [-.78, .46, -.92, .48], [-.4, .38]], rw: .42, rb: .08,
+    front: [[.34, .34], [.6, .36], [.74, .6, .73, .42], [.62, .92, .76, .82], [.46, 1.0, .57, .99], [.37, .96], [.31, .6, .33, .8]], fw: .44, fb: .07,
+    seat: [[-.02, .78], [-.84, .78], [-.9, .87, -.91, .81], [-.56, .91], [-.33, .87], [-.08, .92, -.2, .87], [.02, .85]] },
+  gogoro: { rear: [[-.08, .36], [-.03, .7], [0, .74], [-.8, .76], [-.99, .66], [-.88, .5], [-.46, .42]], rw: .38, rb: .025,
+    front: [[.34, .34], [.62, .34], [.79, .66], [.67, .97], [.5, 1.02], [.38, .98], [.3, .62]], fw: .38, fb: .025,
+    seat: [[-.02, .76], [-.84, .78], [-.92, .83], [-.1, .86], [.02, .82]] },
+  jet: { rear: [[-.1, .36], [-.05, .6], [0, .74], [-.58, .8], [-.9, .93], [-1.02, .86], [-.84, .55], [-.44, .4]], rw: .44, rb: .04,
+    front: [[.34, .34], [.6, .36], [.81, .7], [.72, .9], [.57, 1.0], [.44, 1.04], [.36, .98], [.3, .62]], fw: .48, fb: .04,
+    seat: [[-.02, .78], [-.52, .8], [-.58, .87], [-.9, .96], [-.95, .92], [-.62, .83], [-.08, .87], [.02, .84]] },
+};
+const SCOOTER_COLORS_BY = { retro: [0xf3f3f0, 0x8fd0c4, 0xf0d26a, 0xd98fae, 0x2c5ea8, 0x9aa2a8], gogoro: [0x8a8f94, 0xf3f3f0, 0x1c1c1e, 0x2bb5a8, 0xc9302c, 0x3f5f7a], jet: [0x1c1c1e, 0xe8e8e6, 0xb3231f, 0x2c5ea8, 0x7a8b5c, 0xf2b134] };
+function makeScooter(color, style = 'retro') {
+  const g = new THREE.Group(), SB = SCOOTER_BODY[style], paint = style === 'gogoro' && color === 0x8a8f94 ? ['matte', color] : T.paint(color);
+  const G = scooterGeo[style] ||= {
+    rear: profileGeo(SB.rear, SB.rw, SB.rb, undefined, 0, 8), front: profileGeo(SB.front, SB.fw, SB.fb, undefined, 0, 8),
+    floor: profileGeo([[-.12, .3], [.42, .3], [.42, .37], [-.12, .37]], .38, .02), seat: profileGeo(SB.seat, .34, style === 'gogoro' ? .02 : .04, undefined, 0, 8),
     fender: new THREE.TorusGeometry(.31, .045, 6, 14, Math.PI * .6).rotateZ(Math.PI * .25).rotateY(Math.PI / 2),
-    tire: new THREE.TorusGeometry(.19, .075, 10, 24).rotateY(Math.PI / 2),
+    tire: new THREE.TorusGeometry(.19, style === 'jet' ? .085 : .075, 10, 24).rotateY(Math.PI / 2),
   };
-  const P = partsBin();
-  P.add(G.rear, paint); P.add(G.front, paint); P.add(G.floor, T.rubber); P.add(G.seat, T.seat);
-  P.add(boxGeo, T.chrome, 0, .785, -.42, 0, 0, 0, .37, .01, .8); // seat piping
-  for (const s of [-1, 1]) P.add(boxGeo, T.chrome, s * .19, .86, -.74, 0, 0, 0, .025, .025, .3); // grab rail
-  P.add(boxGeo, T.chrome, 0, .86, -.89, 0, 0, 0, .4, .025, .025);
-  for (const s of [-1, 1]) P.add(boxGeo, T.black, s * .215, .56, -.42, 0, 0, 0, .01, .05, .62); // gloss-black side stripes
-  // engine / swing arm, muffler with a chrome heat shield, rear fender
-  P.add(boxGeo, T.engine, -.1, .3, -.4, 0, 0, 0, .14, .18, .46);
-  P.add(new THREE.CylinderGeometry(.065, .075, .48, 12).rotateX(Math.PI / 2), T.black, .17, .33, -.52); P.add(new THREE.CylinderGeometry(.075, .075, .3, 12, 1, true, -1.2, 2.2).rotateX(Math.PI / 2), T.chrome, .17, .33, -.5);
-  P.add(G.fender, T.black, 0, .26, -.56, -.9);
-  const tailM = M(0x6a0808, { emissive: 0xff2414, emissiveIntensity: .25 }), headM = M(0xf6f4ee, { emissive: 0xfff2d2, emissiveIntensity: .05 });
-  P.add(boxGeo, tailM, 0, .69, -.99, -.5, 0, 0, .28, .06, .05); for (const s of [-1, 1]) P.add(boxGeo, tailM, s * .13, .64, -.98, -.4, s * .4, 0, .08, .03, .03);
+  const P = partsBin(), tailM = M(0x6a0808, { emissive: 0xff2414, emissiveIntensity: .25 }), headM = M(0xf6f4ee, { emissive: 0xfff2d2, emissiveIntensity: .05 });
+  G.shell ||= bareGeo([G.rear, G.front]); G.trim ||= mergeGeometries([bareGeo([G.floor], T.rubber[1]), bareGeo([G.seat], T.seat[1])]);
+  const sm = new THREE.Mesh(G.shell, paintMat(color, paint[0] === 'matte')); sm.castShadow = true; g.add(sm); g.add(new THREE.Mesh(G.trim, VM.matte));
   P.add(boxGeo, T.plate, 0, .48, -.87, -.3, 0, 0, .2, .12, .02);
-  for (const s of [-1, 1]) P.add(boxGeo, headM, s * .1, .73, .76, .5, s * -.45, 0, .15, .022, .03); // V-shaped LED brows on the nose
-  P.add(boxGeo, headM, 0, .6, .8, .35, 0, 0, .16, .09, .03);
+  if (style === 'retro') {
+    P.add(boxGeo, T.chrome, 0, .785, -.42, 0, 0, 0, .37, .01, .8); // seat piping
+    for (const s of [-1, 1]) P.add(boxGeo, T.chrome, s * .19, .86, -.74, 0, 0, 0, .025, .025, .3);
+    P.add(boxGeo, T.chrome, 0, .86, -.89, 0, 0, 0, .4, .025, .025);
+    for (const s of [-1, 1]) P.add(boxGeo, T.black, s * .215, .56, -.42, 0, 0, 0, .01, .05, .62);
+    P.add(boxGeo, T.engine, -.1, .3, -.4, 0, 0, 0, .14, .18, .46);
+    P.add(new THREE.CylinderGeometry(.065, .075, .48, 12).rotateX(Math.PI / 2), T.black, .17, .33, -.52); P.add(new THREE.CylinderGeometry(.075, .075, .3, 12, 1, true, -1.2, 2.2).rotateX(Math.PI / 2), T.chrome, .17, .33, -.5);
+    P.add(boxGeo, tailM, 0, .69, -.99, -.5, 0, 0, .28, .06, .05); for (const s of [-1, 1]) P.add(boxGeo, tailM, s * .13, .64, -.98, -.4, s * .4, 0, .08, .03, .03);
+    for (const s of [-1, 1]) P.add(boxGeo, headM, s * .1, .73, .76, .5, s * -.45, 0, .15, .022, .03);
+    P.add(boxGeo, headM, 0, .6, .8, .35, 0, 0, .16, .09, .03);
+  } else if (style === 'gogoro') {
+    for (const s of [-1, 1]) P.add(boxGeo, headM, 0, .8, .74, .45, 0, s * .62, .3, .025, .03); // the X
+    P.add(new THREE.CylinderGeometry(.07, .07, .03, 16).rotateX(Math.PI / 2 - .45), headM, 0, .66, .78);
+    P.add(boxGeo, T.black, 0, .55, .62, -.6, 0, 0, .3, .5, .02); // dark face panel under the X
+    P.add(boxGeo, T.black, -.16, .3, -.36, 0, 0, 0, .06, .14, .56); // single-sided swing arm (left)
+    P.add(boxGeo, T.alloyDark, -.16, .26, -.56, 0, 0, 0, .07, .16, .16);
+    P.add(boxGeo, tailM, 0, .7, -1.0, -.6, 0, 0, .3, .03, .05); for (const s of [-1, 1]) P.add(boxGeo, tailM, s * .17, .62, -.92, 0, s * .6, 0, .03, .14, .06);
+    for (const s of [-1, 1]) P.add(boxGeo, T.black, s * .195, .58, -.45, 0, 0, 0, .01, .02, .7); // panel seam
+    P.add(boxGeo, T.chrome, 0, .815, -.6, 0, 0, 0, .3, .01, .3);
+  } else { // jet
+    for (const s of [-1, 1]) { P.add(boxGeo, headM, s * .12, .76, .78, .5, s * -.5, s * .25, .17, .06, .03); P.add(boxGeo, headM, s * .17, .86, .72, .5, s * -.5, s * .35, .16, .018, .03); } // split headlights + LED blades
+    for (const s of [-1, 1]) { P.add(boxGeo, T.black, s * .225, .5, -.4, 0, 0, s * .0, .01, .2, .8); P.add(boxGeo, T.caliper, s * .225, .62, -.6, -.35, 0, 0, .012, .03, .5); } // two-tone lower panel + red stripe
+    P.add(boxGeo, T.engine, -.1, .3, -.4, 0, 0, 0, .14, .18, .46);
+    P.add(new THREE.CylinderGeometry(.075, .085, .55, 12).rotateX(Math.PI / 2 - .25), T.black, .19, .4, -.58); P.add(new THREE.CylinderGeometry(.06, .06, .08, 12).rotateX(Math.PI / 2 - .25), T.chrome, .19, .47, -.85); // sport exhaust
+    P.add(boxGeo, tailM, 0, .86, -1.02, -.9, 0, 0, .26, .04, .05); for (const s of [-1, 1]) P.add(boxGeo, tailM, s * .14, .8, -.98, -.9, s * .45, 0, .1, .03, .03);
+    for (const s of [-1, 1]) P.add(boxGeo, T.black, s * .17, .95, -.8, 0, 0, 0, .03, .03, .26); // split grab rails
+  }
+  P.add(G.fender, T.black, 0, .26, -.56, -.9);
   P.build(g);
-  // wheels: dark alloys; the front pivot carries the telescopic fork, the fender and the disc + caliper
+  // wheels; the front pivot carries the telescopic fork, the fender and the disc + caliper
   const mk = (z, front) => { const pivot = new THREE.Group(); pivot.position.set(0, .26, z); g.add(pivot); const spin = new THREE.Group(); pivot.add(spin);
-    spin.add(new THREE.Mesh(G.tire, matTire)); spin.add(new THREE.Mesh(scRimGeo, matRimDark));
-    if (front) { const F = partsBin(); for (const s of [-1, 1]) F.add(new THREE.CylinderGeometry(.026, .026, .74, 8), T.chrome, s * .085, .35, -.1, -.31); F.add(G.fender, paint); F.add(new THREE.CylinderGeometry(.15, .15, .02, 18).rotateZ(Math.PI / 2), T.steel, .085); F.add(boxGeo, T.caliper, .1, .08, -.06, 0, 0, 0, .05, .1, .08); F.build(pivot, false); }
+    spin.add(new THREE.Mesh(G.tire, matTire)); spin.add(new THREE.Mesh(scRimGeo, style === 'retro' ? matRim : matRimDark));
+    if (front) { const F = partsBin(); for (const s of [-1, 1]) F.add(new THREE.CylinderGeometry(.026, .026, .74, 8), style === 'jet' ? T.alloyDark : T.chrome, s * .085, .35, -.1, -.31); F.add(G.fender, paint); F.add(new THREE.CylinderGeometry(.15, .15, .02, 18).rotateZ(Math.PI / 2), T.steel, .085); F.add(boxGeo, T.caliper, .1, .08, -.06, 0, 0, 0, .05, .1, .08); F.build(pivot, false); }
     return { pivot, spin, front }; };
   const wf = mk(.64, true), wb = mk(-.56, false);
   const bar = new THREE.Group(); bar.position.set(0, 1.0, .36); g.add(bar);
   const B = partsBin();
   B.add(new THREE.CylinderGeometry(.022, .022, .68, 6), T.steel, 0, 0, 0, 0, 0, Math.PI / 2);
-  for (const s of [-1, 1]) { B.add(new THREE.CylinderGeometry(.03, .03, .12, 8), T.rubber, s * .3, 0, 0, 0, 0, Math.PI / 2); B.add(new THREE.CylinderGeometry(.008, .008, .28, 4), T.chrome, s * .2, .14, -.03, 0, 0, s * -.3); B.add(boxGeo, T.chrome, s * .26, .28, -.045, 0, 0, 0, .12, .07, .02); B.add(boxGeo, matScreen, s * .26, .28, -.03, 0, 0, 0, .1, .05, .005); }
-  B.add(boxGeo, paint, 0, .03, .07, 0, 0, 0, .34, .17, .22); B.add(boxGeo, headM, 0, .03, .19, 0, 0, 0, .22, .07, .03); B.add(boxGeo, headM, 0, .09, .18, 0, 0, 0, .26, .015, .03);
+  for (const s of [-1, 1]) { B.add(new THREE.CylinderGeometry(.03, .03, .12, 8), T.rubber, s * .3, 0, 0, 0, 0, Math.PI / 2); B.add(new THREE.CylinderGeometry(.008, .008, .28, 4), style === 'retro' ? T.chrome : T.black, s * .2, .14, -.03, 0, 0, s * -.3); B.add(boxGeo, style === 'retro' ? T.chrome : T.black, s * .26, .28, -.045, 0, 0, 0, .12, .07, .02); B.add(boxGeo, matScreen, s * .26, .28, -.03, 0, 0, 0, .1, .05, .005); }
+  B.add(boxGeo, paint, 0, .03, .07, 0, 0, 0, .34, .17, .22);
+  if (style === 'retro') { B.add(boxGeo, headM, 0, .03, .19, 0, 0, 0, .22, .07, .03); B.add(boxGeo, headM, 0, .09, .18, 0, 0, 0, .26, .015, .03); }
   B.add(boxGeo, T.black, 0, .12, .02, 0, 0, 0, .26, .03, .12); // dash
-  B.add(boxGeo, matScreen, 0, .26, .14, -.35, 0, 0, .3, .22, .01); // short tinted screen
+  if (style === 'gogoro') B.add(boxGeo, ['gloss', 0x3a7bd5], 0, .14, .02, -.5, 0, 0, .14, .005, .07); // the round-ish blue TFT
+  B.add(boxGeo, matScreen, 0, style === 'jet' ? .3 : .26, .14, style === 'jet' ? -.5 : -.35, 0, 0, style === 'jet' ? .26 : .3, style === 'jet' ? .3 : .22, .01); // screen
   B.build(bar, false);
   return { group: g, wheels: [wf, wb], headM, tailM, bar };
 }
@@ -3030,11 +3174,12 @@ const CAR_COLORS = [0xf2f2f0, 0xf2f2f0, 0xd9dadc, 0xa8adb2, 0x2a2d31, 0x1b1d20, 
 const BIKE_COLORS = [0x1c1c1e, 0xf3f3f0, 0x2c5ea8, 0xb3231f, 0x5f7f5a, 0x9aa2a8, 0xd98fae, 0x3f8f8c];
 const SCOOTER_COLORS = [0xf3f3f0, 0x1c1c1e, 0xb3231f, 0x2c5ea8, 0x9aa2a8, 0x8fd0c4, 0xf0d26a, 0x7a8b5c];
 function createVehicle(type, x, z, heading, opt = {}) {
-  const kind = type === 'car' ? (opt.kind ?? pick(['sedan', 'sedan', 'sedan', 'suv', 'van', 'taxi'].slice(0, opt.noTaxi ? 5 : 6))) : type === 'bike' ? (opt.kind ?? 'bike') : 'scooter';
-  const b = type === 'car' ? makeCar(opt.color ?? pick(CAR_COLORS), kind) : type === 'bike' ? makeBike(kind === 'youbike' ? 0xf2b134 : opt.color ?? pick(BIKE_COLORS), kind === 'youbike') : makeScooter(opt.color ?? pick(SCOOTER_COLORS));
+  const kind = type === 'car' ? (opt.kind ?? pick(['sedan', 'sedan', 'hatch', 'hatch', 'suv', 'coupe', 'van', 'taxi'].slice(0, opt.noTaxi ? 7 : 8))) : type === 'bike' ? (opt.kind ?? 'bike') : 'scooter';
+  const style = type === 'scooter' ? (opt.style ?? pick(['retro', 'retro', 'gogoro', 'gogoro', 'jet', 'jet', 'jet'])) : null;
+  const b = type === 'car' ? makeCar(opt.color ?? pick(CAR_COLORS), kind) : type === 'bike' ? makeBike(kind === 'youbike' ? 0xf2b134 : opt.color ?? pick(BIKE_COLORS), kind === 'youbike') : makeScooter(opt.color ?? pick(SCOOTER_COLORS_BY[style]), style);
   b.group.rotation.order = 'YXZ'; scene.add(b.group);
   b.group.traverse(o => { if (o.isMesh) o.castShadow = false; }); b.group.children.find(o => o.isMesh).castShadow = true;
-  const v = { type, kind, ...b, mesh: b.group, pos: new THREE.Vector3(x, 0, z), heading, speed: 0, steer: 0, lean: 0, pitch: 0, braking: false,
+  const v = { type, kind, style, ...b, mesh: b.group, pos: new THREE.Vector3(x, 0, z), heading, speed: 0, steer: 0, lean: 0, pitch: 0, braking: false,
     circles: type === 'car' ? [{ o: 1.3, r: 1.0 }, { o: -1.3, r: 1.0 }] : type === 'bike' ? [{ o: .45, r: .24 }, { o: -.45, r: .24 }] : [{ o: .45, r: .42 }, { o: -.45, r: .42 }], npc: null, crankA: 0 };
   vehicles.push(v); syncVehicle(v); return v;
 }
@@ -3097,7 +3242,7 @@ function spawnTraffic() {
   for (let i = 0; i < 36; i++) {
     const F = FREEWAY[i % 2], lane = [-3.6, 0, 3.6][Math.floor(i / 2) % 3];
     const truck = rnd() < .25 && lane !== 0;
-    const mesh = truck ? makeTruck(pick([0xd9d9d6, 0x2f6aa8, 0xb33a2c, 0xe7c14a])) : makeCar(pick(CAR_COLORS), pick(['sedan', 'sedan', 'suv', 'van'])).group;
+    const mesh = truck ? makeTruck(pick([0xd9d9d6, 0x2f6aa8, 0xb33a2c, 0xe7c14a])) : makeCar(pick(CAR_COLORS), pick(['sedan', 'sedan', 'hatch', 'suv', 'coupe', 'van'])).group;
     scene.add(mesh);
     traffic.push({ mesh, F, off: lane + rr(-.2, .2), s: F.len / 2 + rr(-1400, 1400), speed: truck ? rr(22, 26) : rr(27, 33) });
   }
@@ -3596,7 +3741,7 @@ let actx = null, eng = null, muted = false, masterOut = null;
 function initAudio() {
   try {
     actx = new (window.AudioContext || window.webkitAudioContext)();
-    masterOut = actx.createGain(); masterOut.gain.value = SET.vol.master; masterOut.connect(masterOut);
+    masterOut = actx.createGain(); masterOut.gain.value = SET.vol.master; masterOut.connect(actx.destination);
     const o1 = actx.createOscillator(), o2 = actx.createOscillator(), f = actx.createBiquadFilter(), g = actx.createGain();
     o1.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 600; g.gain.value = 0;
     o1.connect(f); o2.connect(f); f.connect(g); g.connect(masterOut); o1.start(); o2.start();
@@ -3738,7 +3883,7 @@ function setupMissions() {
       { text: '騎過大學橋，到卓越路大門 YouBike 站還車', at: ybW && [ybW.x, ybW.z], r: 6, check: () => player.vehicle && player.vehicle.kind === 'youbike' && distTo(ybW.x, ybW.z) < 6 }] });
   add({ id: 'lunch', title: '學餐外送', reward: 3, time: 150, giver: front(bld('學生活動中心'), 6),
     intro: '室友在敬業樓餓到不行，幫他從活動中心學餐帶便當回宿舍。走路、騎車、開車都可以。', steps: [
-      { text: '把便當送到敬業樓 A 門口', at: front(bld('敬業樓 A'), 3), r: 5 }] });
+      { text: '把便當送到男生宿舍（敬業樓）大廳門口', at: front(bld('敬業樓 男生宿舍'), 3), r: 5 }] });
   add({ id: 'book', title: '圖書館還書', reward: 2, time: 75, giver: [PZ[0] - 6, PZ[1] + 6],
     intro: '書今天到期！圖書館大門在二樓：東北角圓廳裡有一道弧形旋轉樓梯，沿著柱廊繞上二樓走廊，走進大門還書。', steps: [
       ...(spiral ? [{ text: '走到圖書資訊大樓東北角的圓廳，找旋轉樓梯入口（有指標）', at: spiral.entry, r: 3 }] : []),
@@ -4340,6 +4485,7 @@ function loop(now) {
     headlight.intensity = player.vehicle && (lightsOn || lampsOn()) ? 180 : 0;
     nightLightsTick(dt); rainTick(dt);
     if (eng && player.vehicle && player.vehicle.type === 'bike') eng.g.gain.value = 0;
+    else if (eng && player.vehicle && player.vehicle.style === 'gogoro') { const v = player.vehicle, r = Math.abs(v.speed) / VMAX[v.type]; eng.o1.frequency.value = 180 + r * 900; eng.o2.frequency.value = eng.o1.frequency.value * 1.5; eng.f.frequency.value = 900 + r * 2200; eng.g.gain.value = muted ? 0 : (.004 + r * .014) * SET.vol.engine; } // electric: a thin motor whine that rises with speed
     else if (eng && player.vehicle) { const v = player.vehicle, r = Math.abs(v.speed) / VMAX[v.type]; const base = v.type === 'car' ? 38 : 70; const gear = v.type === 'car' ? (r * 5) % 1 : r; eng.o1.frequency.value = base + gear * base * 2.2 + r * 40; eng.o2.frequency.value = eng.o1.frequency.value * .502; eng.f.frequency.value = 300 + r * 1400; eng.g.gain.value = muted ? 0 : (.035 + r * .03) * SET.vol.engine; }
     drawMini();
     if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('on'); }
